@@ -57,22 +57,23 @@ class MiniImagenet(Dataset):
             self.csv = self.csv.append(csv_train, ignore_index=True)
 
         print('origin dataset len ',len(self.csv))
-        class_name = self.csv.drop_duplicates(['label'])
+        class_name = self.read_classes_name(root)
+        print(class_name)
+
         self.class_name = {}
-        for i, name in enumerate(class_name['label']):
+        for i, name in enumerate(class_name):
             if ten_class:
                 if i >= 10:
                     break
             self.class_name.update({name: i})
         if ten_class:
             self.csv = self.csv[self.csv.apply(lambda x: x['label'] in self.class_name.keys(), axis=1)]
-
+            print(self.class_name)
         self.csv = self.csv.to_numpy()
 
     @staticmethod
     def reconstruct_miniimagenet(csv, root):
         new_csv = os.path.join(root, "new-csv")
-        print(new_csv)
         train = pd.DataFrame()
         test = pd.DataFrame()
         val = pd.DataFrame()
@@ -91,6 +92,20 @@ class MiniImagenet(Dataset):
 
         print("reconstruct mini imagenet dataset ")
 
+    @staticmethod
+    def write_classes_name(csv, root):
+        csv_class = csv.drop_duplicates(['label'])
+        csv_class = csv_class["label"]
+        csv_class.to_csv(os.path.join(root, 'classes.csv'), index=False, header=False)
+
+    @staticmethod
+    def read_classes_name(root):
+        classes_csv = pd.read_csv(os.path.join(root, 'classes.csv'),header=None)
+        class_name = []
+        for c in classes_csv[0]:
+            class_name.append(c)
+        return class_name
+
     def __len__(self):
         return len(self.csv)
 
@@ -108,7 +123,7 @@ class miniImagenet(object):
         self.num_work = 4
         self.shuffle =True
         self.new_csv = True
-        self.ten_class = False
+        self.ten_class = True
 
     def Transform(self, img_size):
         transform = [
@@ -138,11 +153,11 @@ def main():
     for i,(images, labels) in enumerate(loader):
         if i >10:
             break
-        #labels = F.one_hot(labels, num_classes=10)
         print(labels)
         dis_img = images[0].numpy().transpose(1,2,0)
-        dis_img = (dis_img+1)/2
-        plt.imshow(dis_img)
+        dis_img = dis_img*[0.229, 0.224, 0.225]+[0.485, 0.456, 0.406]
+        dis_img = dis_img*255
+        plt.imshow(dis_img.astype(np.uint8))
         plt.show()
 
 if __name__ == "__main__":

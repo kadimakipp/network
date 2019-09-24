@@ -51,7 +51,7 @@ class MobileNetV2(object):
                 self.optimizer.step()
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
                       .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item()))
-                if i == len(self.loader):
+                if i+1 == len(self.loader):
                     for image_v, labels_v in self.val_loader:
                         correct = 0
                         total = 0
@@ -63,14 +63,12 @@ class MobileNetV2(object):
                         correct += (predicted == labels_v).sum().item()
                         print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
 
-# tonight complete the project 
+# tonight complete the project
 # Refer[https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/02-intermediate/deep_residual_network/main.py]
 
 def main():
-    mobilenet = MobileNetV2(100)
+    mobilenet = MobileNetV2(10)
     mobilenet.Train(80)
-
-
 
 if __name__ == "__main__":
     import fire
