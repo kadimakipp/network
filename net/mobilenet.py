@@ -79,6 +79,23 @@ class MobileNetV2(nn.Module):
         self.bn2   = nn.BatchNorm2d(out_planes)
         self.n = repeat_times
 
+        self._initialize_weights()
+
+    def _initialize_weights(self):
+        # weight initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
     def forward(self, x):
         out = F.relu6(self.bn1(self.conv1(x)))
         out = F.relu6(self.bn1(self.conv2_stride(out)))
@@ -120,15 +137,16 @@ class Net(nn.Module):
 
     def forward(self, x):
         out = self.layers(x)
+        out = out.view(out.shape[0],-1)
         return out
 
 
 
 def main():
-    net = Net(1000)
+    net = Net(10)
     x = torch.randn(1,3,224,224)
     y = net(x)
-    print(y.size())
+    print(y.shape)
 
 
 if __name__ == "__main__":

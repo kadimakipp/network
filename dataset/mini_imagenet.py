@@ -107,6 +107,8 @@ class miniImagenet(object):
         self.root ="/media/kipp/work/Datas/mini-imagenet"
         self.num_work = 4
         self.shuffle =True
+        self.new_csv = True
+        self.ten_class = False
 
     def Transform(self, img_size):
         transform = [
@@ -115,14 +117,14 @@ class miniImagenet(object):
             # transforms.RandomAffine(5),
             transforms.Resize((img_size, img_size),Image.BICUBIC),
             transforms.ToTensor(),
-            transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
         return transform
 
     def get_loader(self, batch_size, img_size, mode="test"):
         transform = self.Transform(img_size)
         return torch.utils.data.DataLoader(
-            MiniImagenet(self.root,transform, train=mode),
+            MiniImagenet(self.root,transform, self.new_csv, train=mode, ten_class=self.ten_class),
             batch_size=batch_size,
             shuffle=self.shuffle,
             num_workers = self.num_work
