@@ -29,11 +29,12 @@ and 20 classes respectively for sampling tasks for meta-training, meta-validatio
 """
 
 class MiniImagenet(Dataset):
-    def __init__(self, root,transform,one_hot=True,train="train", ten_class = True):
+    def __init__(self, root,transform,new_csv=True,train="train", ten_class = False):
         super(MiniImagenet, self).__init__()
         self.transform = transforms.Compose(transform)
         self.__img_dir = os.path.join(root, "images")
-        self.one_hot = one_hot
+        if new_csv:
+            root = os.path.join(root, "new-csv")
         __test_csv = os.path.join(root, "test.csv")
         __val_csv = os.path.join(root, "val.csv")
         __train_csv = os.path.join(root, "train.csv")
@@ -66,14 +67,29 @@ class MiniImagenet(Dataset):
         if ten_class:
             self.csv = self.csv[self.csv.apply(lambda x: x['label'] in self.class_name.keys(), axis=1)]
 
-        if train == "train":
-            self.csv = self.csv.to_numpy()[:5000]
-        elif 'test' in train or 'val' in train:
-            self.csv = self.csv.to_numpy()[5000:]
-        else:
-            self.csv = self.csv.to_numpy()
+        self.csv = self.csv.to_numpy()
 
+    @staticmethod
+    def reconstruct_miniimagenet(csv, root):
+        new_csv = os.path.join(root, "new-csv")
+        print(new_csv)
+        train = pd.DataFrame()
+        test = pd.DataFrame()
+        val = pd.DataFrame()
+        class_name = csv.drop_duplicates(['label'])
+        for name in class_name["label"]:
+            temp = csv[csv.apply(lambda x: x['label'] is name, axis=1)]
+            train = train.append(temp[:500], ignore_index=True)
+            test  = test.append(temp[500:550], ignore_index=True)
+            val   = val.append(temp[550:], ignore_index=True)
+        train = train.reindex(np.random.permutation(train.index))
+        test = test.reindex(np.random.permutation(test.index))
+        val = val.reindex(np.random.permutation(val.index))
+        train.to_csv(os.path.join(new_csv, 'train.csv'),index=False,header=True)
+        test.to_csv(os.path.join(new_csv, 'test.csv'), index=False, header=True)
+        val.to_csv(os.path.join(new_csv, 'val.csv'), index=False, header=True)
 
+        print("reconstruct mini imagenet dataset ")
 
     def __len__(self):
         return len(self.csv)
@@ -103,7 +119,7 @@ class miniImagenet(object):
         ]
         return transform
 
-    def get_loader(self, batch_size, img_size, mode="all"):
+    def get_loader(self, batch_size, img_size, mode="test"):
         transform = self.Transform(img_size)
         return torch.utils.data.DataLoader(
             MiniImagenet(self.root,transform, train=mode),
@@ -120,7 +136,7 @@ def main():
     for i,(images, labels) in enumerate(loader):
         if i >10:
             break
-        labels = F.one_hot(labels, num_classes=10)
+        #labels = F.one_hot(labels, num_classes=10)
         print(labels)
         dis_img = images[0].numpy().transpose(1,2,0)
         dis_img = (dis_img+1)/2
