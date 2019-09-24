@@ -35,7 +35,7 @@ class MobileNetV2(object):
 
         imagenet = miniImagenet()
         self.loader = imagenet.get_loader(16,224,"train")
-        self.val_loader = imagenet.get_loader(32,224,"val")
+        #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
     def Train(self, epochs):
@@ -52,16 +52,11 @@ class MobileNetV2(object):
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
                       .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item()))
                 if i+1 == len(self.loader):
-                    for image_v, labels_v in self.val_loader:
-                        correct = 0
-                        total = 0
-                        image_v = image_v.to(self.device)
-                        labels_v = labels_v.to(self.device)
-                        out_v = self.net(image_v)
-                        _, predicted = torch.max(out_v.data, 1)
-                        total += labels_v.size(0)
-                        correct += (predicted == labels_v).sum().item()
-                        print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+                    out_v = out.detach().data
+                    _, predicted = torch.max(out_v, 1)
+                    total = labels.size(0)
+                    correct = (predicted == labels).sum().item()
+                    print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
 
 # tonight complete the project
 # Refer[https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/02-intermediate/deep_residual_network/main.py]

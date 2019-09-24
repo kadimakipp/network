@@ -77,7 +77,7 @@ class MiniImagenet(Dataset):
         train = pd.DataFrame()
         test = pd.DataFrame()
         val = pd.DataFrame()
-        class_name = csv.drop_duplicates(['label'])
+        class_name = v.drop_duplicates(['label'])
         for name in class_name["label"]:
             temp = csv[csv.apply(lambda x: x['label'] is name, axis=1)]
             train = train.append(temp[:500], ignore_index=True)
