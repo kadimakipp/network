@@ -34,8 +34,8 @@ class MobileNetV2(object):
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.005)
 
-        imagenet = miniImagenet()
-        self.loader = imagenet.get_loader(64,224,"train")
+        self.imagenet = miniImagenet()
+        self.loader = self.imagenet.get_loader(64,224,"train")
         #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
@@ -67,14 +67,14 @@ class MobileNetV2(object):
             'model': self.net.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
-        model_path = os.path.join('../weights', 'checkpoint-%03d.pth.tar' % (epoch))
+        model_path = os.path.join('../gourd', 'checkpoint-%03d.pth.tar' % (epoch))
         torch.save(checkpoint, model_path)
         # copy
         # import shutil
         # shutil.copy('checkpoint.pth.tar', model_path)
 
     def load_model(self):
-        model_path = os.path.join('../weights', 'checkpoint-000.pth.tar')
+        model_path = os.path.join('../gourd', 'checkpoint-000.pth.tar')
         assert os.path.isfile(model_path)
         checkpoint = torch.load(model_path)
         best_acc = checkpoint['loss']
@@ -82,6 +82,24 @@ class MobileNetV2(object):
         self.net.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Load checkpoint at epoch %d.' % start_epoch)
+
+
+    def val_model(self):
+        test_loader = self.imagenet.get_loader(16,224,"val&test")
+        self.net.eval()
+        with torch.no_grad():
+            correct = 0
+            total = 0
+            for images, labels in test_loader:
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                outputs = self.net(images)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+            print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+
 
 
 # tonight complete the project
