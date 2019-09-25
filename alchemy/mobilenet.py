@@ -53,7 +53,7 @@ class MobileNetV2(object):
                 loss.backward()
                 self.optimizer.step()
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f} Lr: {:e}"
-                      .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item(),cur_lr))
+                      .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item(), cur_lr))
                 if i+1 == len(self.loader):
                     self.save_model(loss, epoch)
                     out_v = out.detach().data
@@ -61,7 +61,7 @@ class MobileNetV2(object):
                     total = labels.size(0)
                     correct = (predicted == labels).sum().item()
                     print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
-            if (epochs+1)%10 ==0:
+            if (epoch+1)%10 ==0:
                 cur_lr /=10
                 AuxF.update_lr(self.optimizer, cur_lr)
 
