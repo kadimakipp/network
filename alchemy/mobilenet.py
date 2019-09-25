@@ -22,6 +22,7 @@ import torch.nn.functional as F
 from dataset.mini_imagenet import miniImagenet
 from samhi.auxiliary import AuxFunction as AuxF
 from net.mobilenet import Net
+import os
 
 class MobileNetV2(object):
     def __init__(self, num_class):
@@ -34,7 +35,7 @@ class MobileNetV2(object):
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.005)
 
         imagenet = miniImagenet()
-        self.loader = imagenet.get_loader(16,224,"train")
+        self.loader = imagenet.get_loader(64,224,"train")
         #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
@@ -52,11 +53,36 @@ class MobileNetV2(object):
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
                       .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item()))
                 if i+1 == len(self.loader):
+                    self.save_model(loss, epoch)
                     out_v = out.detach().data
                     _, predicted = torch.max(out_v, 1)
                     total = labels.size(0)
                     correct = (predicted == labels).sum().item()
                     print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+
+    def save_model(self, loss, epoch):
+        checkpoint = {
+            'loss': loss,
+            'epoch': epoch,
+            'model': self.net.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }
+        model_path = os.path.join('../weights', 'checkpoint-%03d.pth.tar' % (epoch))
+        torch.save(checkpoint, model_path)
+        # copy
+        # import shutil
+        # shutil.copy('checkpoint.pth.tar', model_path)
+
+    def load_model(self):
+        model_path = os.path.join('../weights', 'checkpoint-000.pth.tar')
+        assert os.path.isfile(model_path)
+        checkpoint = torch.load(model_path)
+        best_acc = checkpoint['loss']
+        start_epoch = checkpoint['epoch']
+        self.net.load_state_dict(checkpoint['model'])
+        self.optimizer.load_state_dict(checkpoint['optimizer'])
+        print('Load checkpoint at epoch %d.' % start_epoch)
+
 
 # tonight complete the project
 # Refer[https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/02-intermediate/deep_residual_network/main.py]
@@ -64,7 +90,7 @@ class MobileNetV2(object):
 def main():
     mobilenet = MobileNetV2(10)
     mobilenet.Train(80)
-
+    #mobilenet.load_model()
 if __name__ == "__main__":
     import fire
 

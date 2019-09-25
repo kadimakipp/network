@@ -56,6 +56,9 @@ class MiniImagenet(Dataset):
             csv_train = pd.read_csv(__train_csv)
             self.csv = self.csv.append(csv_train, ignore_index=True)
 
+        #self.reconstruct_miniimagenet(self.csv, root)
+        self.write_classes_name(self.csv, root)
+
         print('origin dataset len ',len(self.csv))
         class_name = self.read_classes_name(root)
         print(class_name)
@@ -136,7 +139,7 @@ class miniImagenet(object):
         ]
         return transform
 
-    def get_loader(self, batch_size, img_size, mode="test"):
+    def get_loader(self, batch_size, img_size, mode="all"):
         transform = self.Transform(img_size)
         return torch.utils.data.DataLoader(
             MiniImagenet(self.root,transform, self.new_csv, train=mode, ten_class=self.ten_class),
