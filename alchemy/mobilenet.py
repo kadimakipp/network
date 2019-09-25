@@ -25,21 +25,23 @@ from net.mobilenet import Net
 import os
 
 class MobileNetV2(object):
-    def __init__(self, num_class):
+    def __init__(self, num_class, lr=0.005):
         self.num_class = num_class
         self.device = AuxF.device()
         self.net = Net(num_class)
         self.net.to(self.device)
+        self.lr = lr
         print("init net")
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=0.005)
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=lr)
 
         self.imagenet = miniImagenet()
-        self.loader = self.imagenet.get_loader(64,224,"train")
+        self.loader = self.imagenet.get_loader(16,224,"train")
         #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
     def Train(self, epochs):
+        cur_lr = self.lr
         for epoch in range(epochs):
             for i, (images, labels) in enumerate(self.loader):
                 images = images.to(self.device)
@@ -50,8 +52,8 @@ class MobileNetV2(object):
                 loss = self.criterion(out, labels)
                 loss.backward()
                 self.optimizer.step()
-                print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
-                      .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item()))
+                print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f} Lr: {:e}"
+                      .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item(),cur_lr))
                 if i+1 == len(self.loader):
                     self.save_model(loss, epoch)
                     out_v = out.detach().data
@@ -59,6 +61,10 @@ class MobileNetV2(object):
                     total = labels.size(0)
                     correct = (predicted == labels).sum().item()
                     print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+            if (epochs+1)%10 ==0:
+                cur_lr /=10
+                AuxF.update_lr(self.optimizer, cur_lr)
+
 
     def save_model(self, loss, epoch):
         checkpoint = {
@@ -84,6 +90,7 @@ class MobileNetV2(object):
         print('Load checkpoint at epoch %d.' % start_epoch)
 
 
+
     def val_model(self):
         test_loader = self.imagenet.get_loader(16,224,"val&test")
         self.net.eval()
@@ -106,8 +113,9 @@ class MobileNetV2(object):
 # Refer[https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/02-intermediate/deep_residual_network/main.py]
 
 def main():
+    torch.cuda.empty_cache()
     mobilenet = MobileNetV2(10)
-    mobilenet.Train(80)
+    mobilenet.Train(30)
     #mobilenet.load_model()
 if __name__ == "__main__":
     import fire

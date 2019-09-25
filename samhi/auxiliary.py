@@ -33,3 +33,8 @@ class AuxFunction(object):
         y_cat[range(y.shape[0]), y] = 1.0
 
         return y_cat.to(device=AuxFunction.device())
+
+    @staticmethod
+    def update_lr(optimizer, lr):
+        for params in optimizer.param_groups:
+            params['lr'] = lr
