@@ -21,14 +21,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dataset.mini_imagenet import miniImagenet
 from samhi.auxiliary import AuxFunction as AuxF
-from net.mobilenet import Net
+from net.mobilenet import MobileNetV2
 import os
 
-class MobileNetV2(object):
+class Alchemy(object):
     def __init__(self, num_class, lr=0.005):
         self.num_class = num_class
         self.device = AuxF.device()
-        self.net = Net(num_class)
+        self.net = MobileNetV2(num_class)
         self.net.to(self.device)
         self.lr = lr
         print("init net")
@@ -37,7 +37,6 @@ class MobileNetV2(object):
 
         self.imagenet = miniImagenet()
         self.loader = self.imagenet.get_loader(16,224,"train")
-        #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
     def Train(self, epochs):
@@ -114,7 +113,7 @@ class MobileNetV2(object):
 
 def main():
     torch.cuda.empty_cache()
-    mobilenet = MobileNetV2(10)
+    mobilenet = Alchemy(10)
     mobilenet.Train(30)
     #mobilenet.load_model()
 if __name__ == "__main__":

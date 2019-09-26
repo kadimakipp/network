@@ -29,7 +29,7 @@ and 20 classes respectively for sampling tasks for meta-training, meta-validatio
 """
 
 class MiniImagenet(Dataset):
-    def __init__(self, root,transform,new_csv=True,train="train", ten_class = False):
+    def __init__(self, root,transform,new_csv=True,train="train", ten_class = False, downloads=False):
         super(MiniImagenet, self).__init__()
         self.transform = transforms.Compose(transform)
         self.__img_dir = os.path.join(root, "images")
@@ -56,8 +56,11 @@ class MiniImagenet(Dataset):
             csv_train = pd.read_csv(__train_csv)
             self.csv = self.csv.append(csv_train, ignore_index=True)
 
-        #self.reconstruct_miniimagenet(self.csv, root)
-        self.write_classes_name(self.csv, root)
+        if downloads ==True:
+            if not new_csv:
+                root = os.path.join(root, "new-csv")
+            self.reconstruct_miniimagenet(self.csv, root)
+            self.write_classes_name(self.csv, root)
 
         print('origin dataset len ',len(self.csv))
         class_name = self.read_classes_name(root)
