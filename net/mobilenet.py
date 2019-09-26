@@ -35,19 +35,19 @@ class InvertedResidual(nn.Module):
         self.stride = stride
         assert stride in [1, 2]
 
-        hidden_dim = int(round(inp, expand_ratio))
-        self.use_res_connect = self.stride ==1 and inp==oup
+        hidden_dim = int(round(inp * expand_ratio))
+        self.use_res_connect = self.stride == 1 and inp == oup
 
         layers = []
-        if expand_ratio!=1:
+        if expand_ratio != 1:
             #pw
             layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1))
         layers.extend([
             #dw 3x3x1xhidden_dim kernerl
-            ConvBNReLU(hidden_dim, hidden_dim,stride=stride, groups=hidden_dim),
+            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim),
             #pw-linear
-            nn.Conv2d(hidden_dim, oup,1,1,0,bias=False),
-            nn.BatchNorm2d(oup)
+            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            nn.BatchNorm2d(oup),
         ])
         self.block = nn.Sequential(*layers)
 
@@ -119,13 +119,14 @@ class MobileNetV2(nn.Module):
 def main():
 
     from samhi.model_tools import ModelTools
-    net = MobileNetV2(10)
+    net = torchvision.models.MobileNetV2(10)
     print(net)
     x = torch.randn(1,3,224,224)
     y = net(x)
     tools = ModelTools(x, net)
-    tools.print_parameters_total()
+    tools.print_keras_summary_like()
 
+    tools.print_parameters_total()
     tools.print_model_flops()
     print(y.shape)
 
