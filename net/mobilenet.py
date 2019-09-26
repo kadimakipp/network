@@ -20,70 +20,83 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 
-class Head(nn.Module):
-    def __init__(self):
-        super(Head, self).__init__()
-        self.conv = nn.Conv2d(3, 32, kernel_size=7, stride=2, padding=3,bias=False)
-        self.bn = nn.BatchNorm2d(32)
+class ConvBNReLU(nn.Sequential):
+    def __init__(self, in_planes, out_planes, kernel_size=3,stride=1,groups=1):
+        padding = (kernel_size-1)//2
+        super(ConvBNReLU, self).__init__(
+            nn.Conv2d(in_planes, out_planes,kernel_size,stride, padding,groups=groups,bias=False),
+            nn.BatchNorm2d(out_planes),
+            nn.ReLU6(inplace=True)
+        )
+
+class InvertedResidual(nn.Module):
+    def __init__(self, inp,oup,stride,expand_ratio):
+        super(InvertedResidual, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+
+        hidden_dim = int(round(inp, expand_ratio))
+        self.use_res_connect = self.stride ==1 and inp==oup
+
+        layers = []
+        if expand_ratio!=1:
+            #pw
+            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1))
+        layers.extend([
+            #dw 3x3x1xhidden_dim kernerl
+            ConvBNReLU(hidden_dim, hidden_dim,stride=stride, groups=hidden_dim),
+            #pw-linear
+            nn.Conv2d(hidden_dim, oup,1,1,0,bias=False),
+            nn.BatchNorm2d(oup)
+        ])
+        self.block = nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu6(self.bn(self.conv(x)))
-        return out
-
-class Tail(nn.Module):
-    def __init__(self, num_classes):
-        super(Tail, self).__init__()
-        self.conv_1280 = nn.Conv2d(320, 512,kernel_size=1, stride=1, padding=0,bias=False)
-        self.bn_1280 = nn.BatchNorm2d(512)
-        self.conv_end = nn.Conv2d(512, num_classes,kernel_size=1,bias=False)
-
-    def forward(self, x):
-        out = F.relu6(self.bn_1280(self.conv_1280(x)))
-        out = nn.Dropout2d(0.5)(out)
-        out = F.avg_pool2d(out, kernel_size=2)
-        out = self.conv_end(out)
-        return out
-
-
+        if self.use_res_connect:
+            return x + self.block(x)
+        else:
+            return self.block(x)
 
 class MobileNetV2(nn.Module):
-    def __init__(self, in_planes, expansion, out_planes, repeat_times,stride):
+    def __init__(self, num_classes=10,width_mult=1.0):
         super(MobileNetV2, self).__init__()
-        inner_channels = in_planes*expansion
-        # 1*1-conv2d
-        self.conv1 = nn.Conv2d(in_planes,inner_channels,kernel_size=1,
-                               stride=1,bias=False)
-        self.bn1 = nn.BatchNorm2d(inner_channels)
+        block = InvertedResidual
+        input_channel = 32
+        last_channel = 1280
+        inverted_residual_setting = [
+            #t, c, n, s
+            [1, 16, 1, 1],
+            [6, 24, 2, 2],
+            [6, 32, 3, 2],
+            [6, 64, 4, 2],
+            [6, 96, 3, 1],
+            [6, 160, 3, 2],
+            [6, 320, 1, 1],
+        ]
 
-        #dwise
-        self.conv2_stride = nn.Conv2d(inner_channels,inner_channels,kernel_size=3,stride=stride,
-                                      padding=1,groups=inner_channels,bias=False)
-        self.conv2 = nn.Conv2d(inner_channels, inner_channels, kernel_size=3, stride=1,
-                                      padding=1,groups=inner_channels, bias=False)
-        #linear-1*1-conv2d
-        self.conv3 =  nn.Conv2d(inner_channels, out_planes, kernel_size=1,
-                                stride=1, groups=1, bias=False)
+        #head
+        input_channel = int(input_channel*width_mult)
+        self.last_channel = int(last_channel*max(1.0, width_mult))
+        features = [ConvBNReLU(3,input_channel,stride=2)]
+        #building inverted residual blocks
+        for t, c, n, s in inverted_residual_setting:
+            output_channel = int(c*width_mult)
+            for i in range(n):
+                stride = s if i == 0 else 1
+                features.append(block(input_channel,output_channel,stride,expand_ratio=t))
+                input_channel = output_channel
+        #build last several layers
+        features.append(ConvBNReLU(input_channel,self.last_channel, kernel_size=1))
 
-        #当某个bottleneck重复出现时，'1*1-conv2d'的输入输出的通道数发生变化，不能再使用conv1了
-        self.conv_inner = nn.Conv2d(out_planes,expansion*out_planes,
-                                    kernel_size=1,bias=False)
-        # 当某个bottleneck重复出现时，dwise的输入输出的通道数发生变化，不能再使用conv2_stride和conv2了
-        self.conv_inner_with_stride = nn.Conv2d(expansion * out_planes, expansion * out_planes, kernel_size=3,
-                                                stride=stride, padding=1, groups=out_planes,
-                                                bias=False)  # layer==1 stride=s
-        self.conv_inner_no_stride = nn.Conv2d(expansion * out_planes, expansion * out_planes, kernel_size=3, stride=1,
-                                              padding=1, groups=out_planes, bias=False)  # layer>1  stride=1
-        #当某个bottleneck重复出现时，'linear-1*1-conv2d'的输入输出的通道数发生变化，不能再使用了
-        self.conv3_inner = nn.Conv2d(expansion*out_planes, out_planes, kernel_size=1, stride=1, groups=1, bias=False)
-        #当某个bottleneck重复出现时，batchnorm的通道数也同样发生了变化
-        self.bn_inner = nn.BatchNorm2d(expansion*out_planes)
-        self.bn2   = nn.BatchNorm2d(out_planes)
-        self.n = repeat_times
+        self.features = nn.Sequential(*features)
 
-        self._initialize_weights()
+        #building classifier
+        self.classifier = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(self.last_channel, num_classes),
+        )
 
-    def _initialize_weights(self):
-        # weight initialization
+        #weight initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out')
@@ -94,68 +107,28 @@ class MobileNetV2(nn.Module):
                 nn.init.zeros_(m.bias)
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
+                nn.init.zeros_(m.bias)
 
     def forward(self, x):
-        out = F.relu6(self.bn1(self.conv1(x)))
-        out = F.relu6(self.bn1(self.conv2_stride(out)))
-        out = self.conv3(out)
-        out = self.bn2(out)
-        count = 2
-        while (count <= self.n):
-            temp = out
-            out = F.relu6(self.bn_inner(self.conv_inner(out)))
-            out = F.relu6(self.bn_inner(self.conv_inner_no_stride(out)))
-            out = self.conv3_inner(out)
-            out = self.bn2(out)
-            out = out + temp
-            count = count + 1
-        return out
-
-class Net(nn.Module):
-    # [input_channels, t, c, n, s] 论文中的参数列表
-    param = [[32, 1, 16, 1, 2],
-             [16, 6, 24, 1, 2],
-             [24, 6, 32, 1, 2],
-             [32, 6, 64, 2, 2],
-             [64, 6, 96, 1, 2],
-             [96, 6, 160, 1, 2],
-             [160, 6, 320, 1, 1]]
-
-    def __init__(self, num_class):
-        super(Net,self).__init__()
-        self.layers = self._make_layers(num_class)
-
-    def _make_layers(self,num_class):
-        layer = []
-        layer.append(Head())
-        for i, pa in enumerate(self.param):
-            layer.append(MobileNetV2(*pa))
-
-        layer.append(Tail(num_class))
-        return nn.Sequential(*layer)
-
-    def forward(self, x):
-        out = self.layers(x)
-        out = out.view(out.shape[0],-1)
-        return out
-
+        x = self.features(x)
+        x = x.mean([2, 3])
+        x = self.classifier(x)
+        return x
 
 
 def main():
+
     from samhi.model_tools import ModelTools
-    net = torchvision.models.resnet18(num_classes=10)#Net(100)
+    net = MobileNetV2(10)
+    print(net)
     x = torch.randn(1,3,224,224)
     y = net(x)
     tools = ModelTools(x, net)
     tools.print_parameters_total()
-    tools.print_keras_summary_like()
-    #tools.print_model_flops()
-    #print(net)
+
+    tools.print_model_flops()
     print(y.shape)
-    # total = sum(param.numel() for param in net.parameters())
-    # print(total / 1e6)
+
 
 
 if __name__ == "__main__":
