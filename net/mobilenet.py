@@ -66,12 +66,12 @@ class MobileNetV2(nn.Module):
         inverted_residual_setting = [
             #t, c, n, s
             [1, 16, 1, 1],
-            [6, 24, 2, 2],
-            [6, 32, 3, 2],
-            [6, 64, 4, 2],
-            [6, 96, 3, 1],
-            [6, 160, 3, 2],
-            [6, 320, 1, 1],
+            [2, 24, 1, 2],
+            [2, 32, 1, 2],
+            [2, 64, 2, 2],
+            [2, 96, 1, 1],
+            [2, 160, 1, 2],
+            [2, 320, 1, 1],
         ]
 
         #head
@@ -119,7 +119,7 @@ class MobileNetV2(nn.Module):
 def main():
 
     from samhi.model_tools import ModelTools
-    net = torchvision.models.MobileNetV2(10)
+    net = MobileNetV2(10)
     print(net)
     x = torch.randn(1,3,224,224)
     y = net(x)
