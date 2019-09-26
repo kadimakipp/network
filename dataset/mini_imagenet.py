@@ -158,14 +158,14 @@ def main():
 
     print(len(loader))
     for i,(images, labels) in enumerate(loader):
-        if i >10:
+        if i >2:
             break
         print(labels)
         dis_img = images[0].numpy().transpose(1,2,0)
         dis_img = dis_img*[0.229, 0.224, 0.225]+[0.485, 0.456, 0.406]
         dis_img = dis_img*255
         plt.imshow(dis_img.astype(np.uint8))
-    #     plt.show()
+        plt.show()
 
 if __name__ == "__main__":
     import fire

@@ -21,8 +21,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from dataset.mini_imagenet import miniImagenet
 from samhi.auxiliary import AuxFunction as AuxF
+from samhi.auxiliary import FireInfo
 from net.mobilenet import MobileNetV2
 import os
+
 
 class Alchemy(object):
     def __init__(self, num_class, lr=0.005):
@@ -41,12 +43,13 @@ class Alchemy(object):
         print("init data")
 
     def Train(self, epochs):
+        finfo = FireInfo()
         cur_lr = self.lr
+        acc = 0
         for epoch in range(epochs):
             for i, (images, labels) in enumerate(self.loader):
                 images = images.to(self.device)
                 labels = labels.to(self.device)
-
                 self.optimizer.zero_grad()
                 out= self.net(images)
                 loss = self.criterion(out, labels)
@@ -54,16 +57,22 @@ class Alchemy(object):
                 self.optimizer.step()
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f} Lr: {:e}"
                       .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item(), cur_lr))
+
                 if i+1 == len(self.loader):
                     self.save_model(loss, epoch)
                     out_v = out.detach().data
                     _, predicted = torch.max(out_v, 1)
                     total = labels.size(0)
                     correct = (predicted == labels).sum().item()
-                    print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
-            if (epoch+1)%15 ==0:
-                cur_lr /=10
-                AuxF.update_lr(self.optimizer, cur_lr)
+                    acc = 100 * correct / total
+                    print('Accuracy of the model on the test images: {} %'.format(acc))
+                # finfo.update(loss.item(),acc,cur_lr)
+                # finfo.display()
+
+            # if (epoch+1)%15 ==0:
+            #     cur_lr /=10
+            #     AuxF.update_lr(self.optimizer, cur_lr)
+
 
 
     def save_model(self, loss, epoch):
@@ -114,7 +123,7 @@ class Alchemy(object):
 def main():
     torch.cuda.empty_cache()
     mobilenet = Alchemy(10)
-    mobilenet.Train(45)
+    mobilenet.Train(60)
    # mobilenet.load_model()
     mobilenet.val_model()
     #mobilenet.load_model()
