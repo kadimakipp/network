@@ -25,10 +25,10 @@ from net.mobilenet import Net
 import os
 
 class MobileNetV2(object):
-    def __init__(self, num_class, lr=0.005):
+    def __init__(self, num_class, lr=0.01):
         self.num_class = num_class
         self.device = AuxF.device()
-        self.net = Net(num_class)
+        self.net = torchvision.models.resnet18(num_classes=10)#Net(num_class)
         self.net.to(self.device)
         self.lr = lr
         print("init net")
@@ -36,7 +36,7 @@ class MobileNetV2(object):
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=lr)
 
         self.imagenet = miniImagenet()
-        self.loader = self.imagenet.get_loader(16,224,"train")
+        self.loader = self.imagenet.get_loader(64,224,"train")
         #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
@@ -61,7 +61,7 @@ class MobileNetV2(object):
                     total = labels.size(0)
                     correct = (predicted == labels).sum().item()
                     print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
-            if (epoch+1)%10 ==0:
+            if (epoch+1)%15 ==0:
                 cur_lr /=10
                 AuxF.update_lr(self.optimizer, cur_lr)
 
@@ -80,7 +80,7 @@ class MobileNetV2(object):
         # shutil.copy('checkpoint.pth.tar', model_path)
 
     def load_model(self):
-        model_path = os.path.join('../gourd', 'checkpoint-000.pth.tar')
+        model_path = os.path.join('../gourd', 'checkpoint-024.pth.tar')
         assert os.path.isfile(model_path)
         checkpoint = torch.load(model_path)
         best_acc = checkpoint['loss']
@@ -104,8 +104,7 @@ class MobileNetV2(object):
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-
-            print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+                print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
 
 
 
@@ -115,7 +114,9 @@ class MobileNetV2(object):
 def main():
     torch.cuda.empty_cache()
     mobilenet = MobileNetV2(10)
-    mobilenet.Train(30)
+    mobilenet.Train(45)
+   # mobilenet.load_model()
+    mobilenet.val_model()
     #mobilenet.load_model()
 if __name__ == "__main__":
     import fire

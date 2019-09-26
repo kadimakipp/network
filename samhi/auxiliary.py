@@ -38,3 +38,9 @@ class AuxFunction(object):
     def update_lr(optimizer, lr):
         for params in optimizer.param_groups:
             params['lr'] = lr
+
+    @staticmethod
+    def parameters_total(model):
+        total = sum(param.numel() for param in model.parameters())
+        return total / 1e6
+

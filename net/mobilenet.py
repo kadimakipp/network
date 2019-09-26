@@ -23,7 +23,7 @@ import torch.nn.functional as F
 class Head(nn.Module):
     def __init__(self):
         super(Head, self).__init__()
-        self.conv = nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1,bias=False)
+        self.conv = nn.Conv2d(3, 32, kernel_size=7, stride=2, padding=3,bias=False)
         self.bn = nn.BatchNorm2d(32)
 
     def forward(self, x):
@@ -33,13 +33,14 @@ class Head(nn.Module):
 class Tail(nn.Module):
     def __init__(self, num_classes):
         super(Tail, self).__init__()
-        self.conv_1280 = nn.Conv2d(320, 1280,kernel_size=1, stride=1, padding=0,bias=False)
-        self.bn_1280 = nn.BatchNorm2d(1280)
-        self.conv_end = nn.Conv2d(1280, num_classes,kernel_size=1,bias=False)
+        self.conv_1280 = nn.Conv2d(320, 512,kernel_size=1, stride=1, padding=0,bias=False)
+        self.bn_1280 = nn.BatchNorm2d(512)
+        self.conv_end = nn.Conv2d(512, num_classes,kernel_size=1,bias=False)
 
     def forward(self, x):
         out = F.relu6(self.bn_1280(self.conv_1280(x)))
-        out = F.avg_pool2d(out, kernel_size=7)
+        out = nn.Dropout2d(0.5)(out)
+        out = F.avg_pool2d(out, kernel_size=2)
         out = self.conv_end(out)
         return out
 
@@ -114,12 +115,12 @@ class MobileNetV2(nn.Module):
 
 class Net(nn.Module):
     # [input_channels, t, c, n, s] 论文中的参数列表
-    param = [[32, 1, 16, 1, 1],
-             [16, 6, 24, 2, 2],
-             [24, 6, 32, 3, 2],
-             [32, 6, 64, 4, 2],
-             [64, 6, 96, 3, 1],
-             [96, 6, 160, 3, 2],
+    param = [[32, 1, 16, 1, 2],
+             [16, 6, 24, 1, 2],
+             [24, 6, 32, 1, 2],
+             [32, 6, 64, 2, 2],
+             [64, 6, 96, 1, 2],
+             [96, 6, 160, 1, 2],
              [160, 6, 320, 1, 1]]
 
     def __init__(self, num_class):
@@ -143,10 +144,18 @@ class Net(nn.Module):
 
 
 def main():
-    net = Net(10)
+    from samhi.model_tools import ModelTools
+    net = torchvision.models.resnet18(num_classes=10)#Net(100)
     x = torch.randn(1,3,224,224)
     y = net(x)
+    tools = ModelTools(x, net)
+    tools.print_parameters_total()
+    tools.print_keras_summary_like()
+    #tools.print_model_flops()
+    #print(net)
     print(y.shape)
+    # total = sum(param.numel() for param in net.parameters())
+    # print(total / 1e6)
 
 
 if __name__ == "__main__":
