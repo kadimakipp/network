@@ -79,7 +79,7 @@ class Alchemy(object):
         # shutil.copy('checkpoint.pth.tar', model_path)
 
     def load_model(self):
-        model_path = os.path.join('../gourd', 'checkpoint-000.pth.tar')
+        model_path = os.path.join('../gourd', 'checkpoint-029.pth.tar')
         assert os.path.isfile(model_path)
         checkpoint = torch.load(model_path)
         best_acc = checkpoint['loss']
@@ -103,8 +103,7 @@ class Alchemy(object):
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-
-            print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
+                print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
 
 
 
@@ -116,6 +115,7 @@ def main():
     mobilenet = Alchemy(10)
     mobilenet.Train(30)
     #mobilenet.load_model()
+    mobilenet.val_model()
 if __name__ == "__main__":
     import fire
 
