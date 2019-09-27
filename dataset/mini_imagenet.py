@@ -154,10 +154,11 @@ import matplotlib.pyplot as plt
 def main():
     plt.figure()
     mini_imagenet = miniImagenet()
-    loader = mini_imagenet.get_loader(1, 224)
+    loader = mini_imagenet.get_loader(1, 224,"train")
+
     print(len(loader))
     for i,(images, labels) in enumerate(loader):
-        if i >10:
+        if i >2:
             break
         print(labels)
         dis_img = images[0].numpy().transpose(1,2,0)
