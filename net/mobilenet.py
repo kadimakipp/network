@@ -62,17 +62,25 @@ class MobileNetV2(nn.Module):
         super(MobileNetV2, self).__init__()
         block = InvertedResidual
         input_channel = 32
-        last_channel = 1280
+        last_channel = 512
         inverted_residual_setting = [
             #t, c, n, s
             [1, 16, 1, 1],
             [2, 24, 1, 2],
             [2, 32, 1, 2],
             [2, 64, 2, 2],
-            [2, 96, 1, 1],
-            [2, 160, 1, 2],
-            [2, 320, 1, 1],
+            [2, 96, 1, 2],
+            [2, 160, 1, 1],
+            #----------------
+            # [1, 16, 1, 1],
+            # [2, 24, 1, 2],
+            # [2, 32, 1, 2],
+            # [2, 64, 2, 2],
+            # [2, 96, 1, 1],
+            # [2, 160, 1, 2],
+            # [2, 320, 1, 1],
         ]
+
 
         #head
         input_channel = int(input_channel*width_mult)
@@ -121,13 +129,12 @@ def main():
     from samhi.model_tools import ModelTools
     net = MobileNetV2(10)
     print(net)
-    x = torch.randn(1,3,224,224)
+    x = torch.randn(1,3,112,112)
     y = net(x)
     tools = ModelTools(x, net)
     tools.print_keras_summary_like()
-
     tools.print_parameters_total()
-    tools.print_model_flops()
+    # tools.print_model_flops()
     print(y.shape)
 
 

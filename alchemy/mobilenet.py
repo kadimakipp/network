@@ -28,6 +28,7 @@ import os
 
 class Alchemy(object):
     def __init__(self, num_class, lr=0.01):
+        self.gourd = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gourd')
         self.num_class = num_class
         self.device = AuxF.device()
         self.net = MobileNetV2(num_class)
@@ -36,10 +37,8 @@ class Alchemy(object):
         print("init net")
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9)
-
         self.imagenet = miniImagenet()
         self.loader = self.imagenet.get_loader(64,224,"train")
-        #self.val_loader = imagenet.get_loader(32,224,"val")
         print("init data")
 
     def Train(self, epochs):
@@ -55,11 +54,11 @@ class Alchemy(object):
                 loss = self.criterion(out, labels)
                 loss.backward()
                 self.optimizer.step()
-                if i%20==0:
+                if i%2==0:
                     print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f} Lr: {:e}"
                           .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item(), cur_lr))
                     finfo.update(loss.item(), acc, cur_lr)
-                    finfo.display()
+
 
                 if i+1 == len(self.loader):
                     self.save_model(loss, epoch)
@@ -74,8 +73,7 @@ class Alchemy(object):
             if (epoch+1)%15 ==0:
                 cur_lr /=10
                 AuxF.update_lr(self.optimizer, cur_lr)
-
-
+        finfo.save()
 
     def save_model(self, loss, epoch):
         checkpoint = {
@@ -84,14 +82,11 @@ class Alchemy(object):
             'model': self.net.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
-        model_path = os.path.join('../gourd', 'checkpoint-%03d.pth.tar' % (epoch))
+        model_path = os.path.join(self.gourd, 'checkpoint-%03d.pth.tar' % (epoch))
         torch.save(checkpoint, model_path)
-        # copy
-        # import shutil
-        # shutil.copy('checkpoint.pth.tar', model_path)
 
     def load_model(self):
-        model_path = os.path.join('../gourd', 'checkpoint-029.pth.tar')
+        model_path = os.path.join(self.gourd, 'checkpoint-029.pth.tar')
         assert os.path.isfile(model_path)
         checkpoint = torch.load(model_path)
         best_acc = checkpoint['loss']
@@ -99,8 +94,6 @@ class Alchemy(object):
         self.net.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Load checkpoint at epoch %d.' % start_epoch)
-
-
 
     def val_model(self):
         test_loader = self.imagenet.get_loader(16,224,"val&test")
@@ -117,20 +110,12 @@ class Alchemy(object):
                 correct += (predicted == labels).sum().item()
                 print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
 
-
-
-# tonight complete the project
-# Refer[https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/02-intermediate/deep_residual_network/main.py]
-
 def main():
     torch.cuda.empty_cache()
     mobilenet = Alchemy(10)
     mobilenet.Train(60)
    # mobilenet.load_model()
     mobilenet.val_model()
-    #mobilenet.load_model()
-    mobilenet.val_model()
 if __name__ == "__main__":
     import fire
-
     fire.Fire(main)

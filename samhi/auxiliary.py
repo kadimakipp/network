@@ -17,6 +17,7 @@ from __future__ import print_function
 import numpy as np
 import torch
 import torchvision
+import os
 
 class AuxFunction(object):
     def __init__(self):
@@ -45,12 +46,18 @@ class AuxFunction(object):
         return total / 1e6
 
 import matplotlib.pyplot as plt
+import pandas as pd
+
 class FireInfo(object):
     def __init__(self):
+        root = os.path.dirname(__file__)
+        self.fire = os.path.join(root, "fire")
+        print(self.fire)
         plt.figure()
         self.loss= list([0])
         self.acc = list([0])
         self.lr = list([0])
+
     def update(self, loss, acc,lr):
         self.loss.append(loss)
         self.acc.append(acc)
@@ -60,6 +67,20 @@ class FireInfo(object):
         self.loss = list([0])
         self.acc = list([0])
         self.lr = list([0])
+    def save(self):
+        data = {'loss': self.loss, 'acc': self.acc, 'lr':self.lr}
+        csv = pd.DataFrame(data)
+        csv.to_csv(os.path.join(self.fire, 'fire.csv'))
+
+    def read(self):
+        self.clear()
+        data = pd.read_csv(os.path.join(self.fire, 'fire.csv'))
+        loss = data['loss']
+        self.loss.extend(loss.to_list())
+        acc = data['acc']
+        self.acc.extend(acc.to_list())
+        lr = data['lr']
+        self.lr.extend(lr.to_list())
 
     def display(self):
         ax1 = plt.subplot(3,1,1)
@@ -72,12 +93,14 @@ class FireInfo(object):
         ax3.set_title("LR")
         plt.plot(np.arange(len(self.lr)), self.lr,color='r')
         #plt.draw()
-        plt.pause(0.1)
+        plt.show()
 
 
 if __name__ == "__main__":
     fire = FireInfo()
     for i in np.arange(1,100):
         fire.update(i,i,i)
-        fire.display()
+    fire.save()
+    fire.read()
+    fire.display()
 
