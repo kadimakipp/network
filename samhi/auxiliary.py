@@ -41,9 +41,17 @@ class AuxFunction(object):
             params['lr'] = lr
 
     @staticmethod
+    def get_lr(optimizer):
+        lr = []
+        for params in optimizer.param_groups:
+            lr.append(params['lr'])
+        return lr
+
+    @staticmethod
     def parameters_total(model):
         total = sum(param.numel() for param in model.parameters())
         return total / 1e6
+
 
 import matplotlib.pyplot as plt
 import pandas as pd
