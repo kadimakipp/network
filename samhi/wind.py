@@ -22,6 +22,7 @@ import torch.nn as nn
 from torchvision.models.resnet import resnet18 as ResNet18
 import matplotlib.pyplot as plt
 import pandas as pd
+import math
 
 """
 PyTorch lr scheduler  plot it
@@ -30,7 +31,7 @@ PyTorch lr scheduler  plot it
 class Wind(object):
     def __init__(self):
         self.net = ResNet18()
-        self.optim = optim.SGD(self.net.parameters(), lr = 0.1,momentum=0.9)
+        self.optim = optim.SGD(self.net.parameters(), lr = 1,momentum=0.9)
         plt.figure()
 
 
@@ -89,7 +90,7 @@ class Wind(object):
     def LambdaLR(self):
         """yourself define lr scheduler """
         def lambdalr(epoch):
-            return epoch*epoch
+            return epoch
         return optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=lambdalr)
 
     def WarmRestartLR(self,lr, T_max:int, mult:int, eta_min:float, factor:float, restart=False):
@@ -105,15 +106,33 @@ class Wind(object):
                 if Tnum!=0 and Tnum % 2==0:
                     Tnum  = Tnum-1
             T = T_max
-            # mult params
-            # if Tnum<2**Tnum:
-            #     T = T_max*2**Tnum
-
             cos_in = Tcur / T * np.pi
             n_t = eta_min + factor**Tnum *(lr-eta_min)*(1+np.cos(cos_in))/2
             return n_t
         return optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=cosineAnnealing)
 
+    def WarmRestartLR2(self, lr, T_max, mult,eta_min,factor):
+        """new ways to warm restart"""
+        def warmRestart(epoch):
+            Tnum = epoch // T_max
+            if mult>1:
+                index = int(math.log(Tnum*(mult-1)+1,mult))
+                Ts = [np.power(mult, i) for i in np.arange(0, 10)]
+                T = Ts[index]*T_max
+                f = np.power(factor, index)
+                Tbe = 0
+                while index >0:
+                    index-= 1
+                    Tbe += Ts[index]*T_max
+                Tcur = (epoch - Tbe) / T* np.pi
+                n_t = eta_min + f * (lr - eta_min) * (1 + np.cos(Tcur)) / 2
+                return n_t
+            else:
+                f = np.power(factor,Tnum-1)
+                cos_in = epoch/T_max*np.pi - Tnum*np.pi#key 减去前面的
+                n_t = eta_min+f*(lr-eta_min)*(1+np.cos(cos_in))/2
+                return n_t
+        return optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=warmRestart)
 
 
     def show(self, epochs, scheduler=None):
@@ -137,8 +156,9 @@ def main():
     # wind.show(120, wind.MultiStepLR(milestones=[20,60,100]))
     # wind.show(30, wind.ExponentialLR(0.1))  #学习率下降速度超快。
     #wind.show(150, wind.CosineAnnealingLR(30,0.01))
-    # wind.show(150, wind.LambdaLR())#ConsineAnnealingLR, need change
-    wind.show(150, wind.WarmRestartLR(0.1, 10,1,0.001,0.75))
+    #wind.show(150, wind.LambdaLR())#ConsineAnnealingLR, need change
+    wind.show(150, wind.WarmRestartLR(0.1, 30, 2, 0.001, 0.65))
+    wind.show(150, wind.WarmRestartLR2(0.1, 30,2,0.001,0.65))
 if __name__ == "__main__":
     import fire
 
