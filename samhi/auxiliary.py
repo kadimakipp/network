@@ -18,6 +18,7 @@ import numpy as np
 import torch
 import torchvision
 import os
+import math
 
 class AuxFunction(object):
     def __init__(self):
@@ -51,6 +52,54 @@ class AuxFunction(object):
     def parameters_total(model):
         total = sum(param.numel() for param in model.parameters())
         return total / 1e6
+
+    @staticmethod
+    def WarmRestart(optim, lr=0.1, T_max=10, mult=2,eta_min=0.00001,factor=0.65):
+        """ T_max: 周期， mutl 周期的比值, eta_min 最小lr, factor, 幅度缩小比例
+            paper: https://arxiv.org/pdf/1608.03983.pdf
+        """
+        def warmRestart(epoch):
+            Tnum = epoch // T_max
+            if mult > 1:
+                index = int(math.log(Tnum * (mult - 1) + 1, mult))
+                Ts = [np.power(mult, i) for i in np.arange(0, 10)]
+                T = Ts[index] * T_max
+                f = np.power(factor, index)
+                Tbe = 0
+                while index > 0:
+                    index -= 1
+                    Tbe += Ts[index] * T_max
+                Tcur = (epoch - Tbe) / T * np.pi
+                n_t = eta_min + f * (lr - eta_min) * (1 + np.cos(Tcur)) / 2
+                return n_t
+            else:
+                f = np.power(factor, Tnum - 1)
+                cos_in = epoch % T_max * np.pi  # key 减去前面的
+                n_t = eta_min + f * (lr - eta_min) * (1 + np.cos(cos_in)) / 2
+                return n_t
+        return torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=warmRestart)
+
+    @staticmethod
+    def CosineAnnealing(optim, lr=0.1, T_max=30,eta_min=0.0001,factor=0.65, restart=False):
+        """ factor version
+        T_max: 周期， mutl 周期的比值, eta_min 最小lr, factor, 幅度缩小比例
+        """
+        def cosineAnnealing(epoch):
+            Tnum = epoch // T_max
+            Tcur = epoch
+            if restart:
+                Tcur = epoch % T_max
+            else:
+                if Tnum != 0 and Tnum % 2 == 0:
+                    Tnum = Tnum - 1
+            T = T_max
+            cos_in = Tcur / T * np.pi
+            n_t = eta_min + factor ** Tnum * (lr - eta_min) * (1 + np.cos(cos_in)) / 2
+            return n_t
+
+        return torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=cosineAnnealing)
+
+
 
 
 import matplotlib.pyplot as plt

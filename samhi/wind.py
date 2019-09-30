@@ -83,7 +83,6 @@ class Wind(object):
         pass
 
     def CyclicLR(self):
-
         #paper 1506.01186
         pass
 
@@ -129,11 +128,18 @@ class Wind(object):
                 return n_t
             else:
                 f = np.power(factor,Tnum-1)
-                cos_in = epoch/T_max*np.pi - Tnum*np.pi#key 减去前面的
+                cos_in = epoch%T_max*np.pi#key 减去前面的
                 n_t = eta_min+f*(lr-eta_min)*(1+np.cos(cos_in))/2
                 return n_t
         return optim.lr_scheduler.LambdaLR(self.optim, lr_lambda=warmRestart)
 
+    def Lmbda_warm_restart(self):
+        from samhi.auxiliary import AuxFunction as AuxF
+        return AuxF.WarmRestart(self.optim)
+
+    def Lmbda_cosine_annealing(self):
+        from samhi.auxiliary import AuxFunction as AuxF
+        return AuxF.CosineAnnealing(self.optim)
 
     def show(self, epochs, scheduler=None):
         lrs = []
@@ -148,17 +154,17 @@ class Wind(object):
         plt.plot(range(epochs), lrs)
         plt.show()
 
-
-
 def main():
     wind = Wind()
     # wind.show(300, wind.StepLR(50,0.5))
     # wind.show(120, wind.MultiStepLR(milestones=[20,60,100]))
     # wind.show(30, wind.ExponentialLR(0.1))  #学习率下降速度超快。
-    #wind.show(150, wind.CosineAnnealingLR(30,0.01))
-    #wind.show(150, wind.LambdaLR())#ConsineAnnealingLR, need change
-    wind.show(150, wind.WarmRestartLR(0.1, 30, 2, 0.001, 0.65))
-    wind.show(150, wind.WarmRestartLR2(0.1, 30,2,0.001,0.65))
+    # wind.show(150, wind.CosineAnnealingLR(30,0.01))
+    # wind.show(150, wind.LambdaLR())#ConsineAnnealingLR, need change
+    # wind.show(150, wind.WarmRestartLR(0.1, 30, 2, 0.001, 0.65))
+    # wind.show(150, wind.WarmRestartLR2(0.1, 30,2,0.001,0.65))
+    wind.show( 150, wind.Lmbda_cosine_annealing())
+    wind.show(150, wind.Lmbda_warm_restart())
 if __name__ == "__main__":
     import fire
 
