@@ -129,7 +129,7 @@ class miniImagenet(object):
         self.num_work = 4
         self.shuffle =True
         self.new_csv = True
-        self.ten_class = True
+        self.ten_class = False
 
     def Transform(self, img_size):
         transform = [

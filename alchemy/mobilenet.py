@@ -27,7 +27,7 @@ import os
 
 
 class Alchemy(object):
-    def __init__(self, num_class, lr=0.1):
+    def __init__(self, num_class=100, lr=0.1):
         self.gourd = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gourd')
         self.num_class = num_class
         self.imagenet = miniImagenet()
@@ -44,8 +44,8 @@ class Alchemy(object):
 
 
     def LRScheduler(self):
-        return AuxF.CosineAnnealing(self.optimizer,
-                                    T_max=15*len(self.loader), factor=0.2)
+        return AuxF.WarmRestart(self.optimizer,
+                                    T_max=20*len(self.loader), factor=0.75)
 
     def Train(self, epochs):
         finfo = FireInfo()
@@ -115,10 +115,10 @@ class Alchemy(object):
 
 def main():
     torch.cuda.empty_cache()
-    mobilenet = Alchemy(10)
+    mobilenet = Alchemy()
     mobilenet.Train(60)
     # mobilenet.load_model()
-    mobilenet.val_model("train")
+    # mobilenet.val_model("train")
     mobilenet.val_model('val&test')
 if __name__ == "__main__":
     import fire
