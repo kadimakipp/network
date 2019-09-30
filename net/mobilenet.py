@@ -19,6 +19,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+from net.SENet import SE
 
 class ConvBNReLU(nn.Sequential):
     def __init__(self, in_planes, out_planes, kernel_size=3,stride=1,groups=1):
@@ -37,7 +38,6 @@ class InvertedResidual(nn.Module):
 
         hidden_dim = int(round(inp * expand_ratio))
         self.use_res_connect = self.stride == 1 and inp == oup
-
         layers = []
         if expand_ratio != 1:
             #pw
@@ -50,10 +50,20 @@ class InvertedResidual(nn.Module):
             nn.BatchNorm2d(oup),
         ])
         self.block = nn.Sequential(*layers)
+        self.se_1 = nn.Conv2d(oup,oup//8,kernel_size=1)
+        self.se_2 = nn.Conv2d(oup//8, oup,kernel_size=1)
 
     def forward(self, x):
         if self.use_res_connect:
-            return x + self.block(x)
+            # out = self.block(x)
+            # w = (out)
+            # return x +out*w
+            out = self.block(x)
+            w = F.avg_pool2d(out, out.shape[2])
+            w = F.relu6(self.se_1(w), inplace=True)
+            w = F.sigmoid(self.se_2(w))
+            return x+out*w
+
         else:
             return self.block(x)
 
@@ -66,19 +76,19 @@ class MobileNetV2(nn.Module):
         inverted_residual_setting = [
             #t, c, n, s
             [1, 16, 1, 1],
-            [2, 24, 1, 2],
-            [2, 32, 1, 2],
-            [2, 64, 2, 2],
-            [2, 96, 1, 2],
-            [2, 160, 1, 1],
-            #----------------
+            [3, 24, 1, 2],
+            [3, 32, 1, 2],
+            [3, 64, 2, 2],
+            [3, 96, 1, 2],
+            [3, 160, 1, 1],
+            # #----------------
             # [1, 16, 1, 1],
-            # [2, 24, 1, 2],
-            # [2, 32, 1, 2],
-            # [2, 64, 2, 2],
-            # [2, 96, 1, 1],
-            # [2, 160, 1, 2],
-            # [2, 320, 1, 1],
+            # [6, 24, 2, 2],
+            # [6, 32, 3, 2],
+            # [6, 64, 4, 2],
+            # [6, 96, 3, 1],
+            # [6, 160, 3, 2],
+            # [6, 320, 1, 1],
         ]
 
 
@@ -125,14 +135,14 @@ class MobileNetV2(nn.Module):
 
 
 def main():
-
+    # torchvision.models.MobileNetV2(10)
     from samhi.model_tools import ModelTools
     net = MobileNetV2(10)
     print(net)
     x = torch.randn(1,3,112,112)
     y = net(x)
     tools = ModelTools(x, net)
-    tools.print_keras_summary_like()
+    #tools.print_keras_summary_like()
     tools.print_parameters_total()
     # tools.print_model_flops()
     print(y.shape)

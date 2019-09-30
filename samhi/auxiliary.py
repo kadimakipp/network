@@ -52,7 +52,6 @@ class FireInfo(object):
     def __init__(self):
         root = os.path.dirname(__file__)
         self.fire = os.path.join(root, "fire")
-        print(self.fire)
         plt.figure()
         self.loss= list([0])
         self.acc = list([0])

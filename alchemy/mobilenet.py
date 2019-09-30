@@ -38,7 +38,7 @@ class Alchemy(object):
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9)
         self.imagenet = miniImagenet()
-        self.loader = self.imagenet.get_loader(64,224,"train")
+        self.loader = self.imagenet.get_loader(128,112,"train")
         print("init data")
 
     def Train(self, epochs):
@@ -74,6 +74,7 @@ class Alchemy(object):
                 cur_lr /=10
                 AuxF.update_lr(self.optimizer, cur_lr)
         finfo.save()
+        finfo.display()
 
     def save_model(self, loss, epoch):
         checkpoint = {
@@ -86,7 +87,7 @@ class Alchemy(object):
         torch.save(checkpoint, model_path)
 
     def load_model(self):
-        model_path = os.path.join(self.gourd, 'checkpoint-029.pth.tar')
+        model_path = os.path.join(self.gourd, 'checkpoint-030.pth.tar')
         assert os.path.isfile(model_path)
         checkpoint = torch.load(model_path)
         best_acc = checkpoint['loss']
@@ -95,8 +96,8 @@ class Alchemy(object):
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Load checkpoint at epoch %d.' % start_epoch)
 
-    def val_model(self):
-        test_loader = self.imagenet.get_loader(16,224,"val&test")
+    def val_model(self, train):
+        test_loader = self.imagenet.get_loader(16,112,train)
         self.net.eval()
         with torch.no_grad():
             correct = 0
@@ -114,8 +115,9 @@ def main():
     torch.cuda.empty_cache()
     mobilenet = Alchemy(10)
     mobilenet.Train(60)
-   # mobilenet.load_model()
-    mobilenet.val_model()
+    # mobilenet.load_model()
+    mobilenet.val_model("train")
+    mobilenet.val_model('val&test')
 if __name__ == "__main__":
     import fire
     fire.Fire(main)

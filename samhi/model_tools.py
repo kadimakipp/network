@@ -34,7 +34,7 @@ class ModelTools(object):
 
     def print_parameters_total(self):
         total = self.parameters_total(self.model)
-        print('Number of params: %.2f M' % (total))
+        print('Number of params: %.6f M' % (total))
 
 
     @staticmethod
@@ -44,7 +44,7 @@ class ModelTools(object):
 
     def print_model_flops(self):
         flops = self.model_flops(self.input,self.model)
-        print('Number of flops: %.2fG' % (flops))
+        print('Number of flops: %.6fG' % (flops))
 
 
     #TODO: what fuck
