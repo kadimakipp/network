@@ -27,23 +27,28 @@ import os
 
 
 class Alchemy(object):
-    def __init__(self, num_class, lr=0.01):
+    def __init__(self, num_class, lr=0.1):
         self.gourd = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gourd')
         self.num_class = num_class
+        self.imagenet = miniImagenet()
+        self.loader = self.imagenet.get_loader(128, 112, "train")
+        print("init data")
         self.device = AuxF.device()
         self.net = MobileNetV2(num_class)
         self.net.to(self.device)
         self.lr = lr
-        print("init net")
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9)
-        self.imagenet = miniImagenet()
-        self.loader = self.imagenet.get_loader(128,112,"train")
-        print("init data")
+        self.lr_scheduler = self.LRScheduler()
+        print("init net")
+
+
+    def LRScheduler(self):
+        return AuxF.CosineAnnealing(self.optimizer,
+                                    T_max=15*len(self.loader), factor=0.2)
 
     def Train(self, epochs):
         finfo = FireInfo()
-        cur_lr = self.lr
         acc = 0
         for epoch in range(epochs):
             for i, (images, labels) in enumerate(self.loader):
@@ -54,6 +59,8 @@ class Alchemy(object):
                 loss = self.criterion(out, labels)
                 loss.backward()
                 self.optimizer.step()
+                cur_lr = AuxF.get_lr(self.optimizer)
+                self.lr_scheduler.step()
                 if i%2==0:
                     print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f} Lr: {:e}"
                           .format(epoch + 1, epochs, i + 1, len(self.loader), loss.item(), cur_lr))
@@ -68,11 +75,6 @@ class Alchemy(object):
                     correct = (predicted == labels).sum().item()
                     acc = 100 * correct / total
                     print('Accuracy of the model on the test images: {} %'.format(acc))
-
-
-            if (epoch+1)%15 ==0:
-                cur_lr /=10
-                AuxF.update_lr(self.optimizer, cur_lr)
         finfo.save()
         finfo.display()
 
