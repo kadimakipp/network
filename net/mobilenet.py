@@ -127,16 +127,35 @@ class MobileNetV2(nn.Module):
 def main():
 
     from samhi.model_tools import ModelTools
+    from samhi.torchsummary import summary
     net = MobileNetV2(10)
+    # summary(net, input_size=(3, 112, 112),device="cpu")
     print(net)
-    x = torch.randn(1,3,112,112)
-    y = net(x)
-    tools = ModelTools(x, net)
-    tools.print_keras_summary_like()
-    tools.print_parameters_total()
-    # tools.print_model_flops()
-    print(y.shape)
+    x = torch.randn(1,3,112,112,requires_grad=True)
 
+
+
+
+    # tools = ModelTools(x, net)
+    # tools.print_keras_summary_like()
+    # tools.print_parameters_total()
+    # # tools.print_model_flops()
+    # print(y.shape)
+    # print(y.grad_fn)
+    # def for_hook(module, input, output):
+    #     ms = module.named_modules()
+    #     for id, m in enumerate(ms):
+    #         print(id, '----' , m)
+    #
+    #
+    #     #for inp in input:
+    #     #    print(inp)
+    #     #for oup in output:
+    #     #    print(oup)
+    # hook = net.register_forward_hook(for_hook)
+    # y = net(x)
+    # hook.remove()
+    
 
 
 if __name__ == "__main__":
