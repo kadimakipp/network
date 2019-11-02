@@ -4,6 +4,8 @@ reduce = True 输出标量
 reduction='mean' batch size的均值
 reduction='sum'  batch size的和
 reduce and size_average will be Deprecated
+
+[reference](https://zhuanlan.zhihu.com/p/61379965)
 ## 1.L1Loss
 input 和target中每个元素的差的绝对值mean absolute error.
 
