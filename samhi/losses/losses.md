@@ -53,3 +53,17 @@ KL离散度又称为相对熵(Relative Entropy),用于描述两个概率分布�
 同时也可以从另外一个角度上观察这个公式，即计算的时p与q之间的对数差在p上的期望。特别注意,D(p||q)不等于D(q||p),其不具有对称性，因此不能称为K-L距离。
 **信息熵=交叉熵-相对熵**从信息论的角度观察三者，其关系为信息熵=交叉熵-相对熵。在机器学习中，当训练数据固定，最小化相对熵D(p||q)等价于最小化交叉熵H(p,q).
 
+### 7.BCELoss
+```python
+torch.nn.BCELoss(weight=None, size_average=None, reduce=None, reduction='mean')
+```
+功能:二分类任务时的交叉熵计算函数.此函数可以认为时`nn.CrossEntropyLoss()`函数的特例。其分类限定为二分类，y必须时{0,1}.还需要注意的是,
+input应该为概率分布的形式，这样才符合交叉熵的应用。所以在BCELoss之前，input一般为sigmoid激活层的输出。
+![BCE](https://github.com/kadimakipp/network/raw/master/samhi/losses/images/BCE.jpg)
+
+### 8.BCEWithLogitsLoss
+```python
+torch.nn.BCEWithLogitsLoss(weight=None, size_average=None, reduce=None, reduction='mean', pos_weight=None)
+```
+功能:将Sigmoid与BCELoss结合，类似于CrossEntropyLoss()
+pos_weight-: 正样本的权重, 当p>1，提高召回率，当P<1，提高精确度。可达到权衡召回率(Recall)和精确度(Precision)的作用。

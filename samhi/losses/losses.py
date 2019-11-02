@@ -136,6 +136,21 @@ def KLdiv_fun():
 
     return output
 
+def BCE_fun():
+    input = torch.randn(3)
+    target = torch.empty(3).random_(2)
+    m = nn.Sigmoid()
+    loss = nn.BCELoss()
+    return loss(m(input),target)
+
+def BCEWithLogits_fun():
+    input = torch.full([10,64], 0.999) #a prediction(logit)
+    target = torch.ones([10,64],dtype=torch.float32)#batchsize=10,64
+    pos_weight = torch.ones([64])
+    loss = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    output = loss(input, target)
+    return output
+
 
 
 def main(l='NLL'):
@@ -152,6 +167,10 @@ def main(l='NLL'):
         output = KLdiv_fun()
     elif l in ['PoissonNLL']:
         output = PoissonNLL_fun()
+    elif l in ['BCE']:
+        output = BCE_fun()
+    elif l in ['BCEWithLogits']:
+        output = BCEWithLogits_fun()
     else:
         print('l must be in [L1, MSE, CrossEntropy, NLL, KLDiv, PoissonNLL]')
     print('\n\n')
