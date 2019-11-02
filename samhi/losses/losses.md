@@ -20,4 +20,4 @@ torch.nn.CrossEntropyLoss(weight=None, size_average=None, ignore_index=-100, red
 在多分类任务中，经常采用softmax激活函数+交叉熵损失函数，因为**交叉熵描述了两个概率的分布差异**,然而神经网络输出时向量，并不是概率分布的形式。所以需要softmax激活函数
 将一个向量进行归一化成概率分布的形式，在采用交叉熵损失函数计算loss。在回顾Pytorch的`nn.LogSoftmax()`相当与激活函数,`nn.NLLLoss()`是损失函数，将其结合，完整的是否可以叫做softmax
 +交叉熵损失函数呢?
-![samhi/losses/images/crossEntropy.jpg]
+![https://github.com/kadimakipp/network/raw/master/samhi/losses/images/crossEntropy.jpg]
