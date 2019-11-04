@@ -61,8 +61,7 @@ class HEDBSDS(Dataset):
             print('train is not in [train, val, test]')
 
         #label augment
-        self.ToTensor =transforms.Compose([transforms.ToTensor()])
-
+        self.Normalize =transforms.Compose([transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
 
     def __len__(self):
@@ -79,15 +78,18 @@ class HEDBSDS(Dataset):
             print("Error check image")
         image = Image.open(os.path.join(self.root_dir, image))
         image = self.transform(image)
+        image = self.Normalize(image)
         _,h,w = image.shape
         if label is not None:
             label = Image.open(os.path.join(self.root_dir, label)).convert('L')
-            label = label.resize((h, w), Image.BILINEAR)
-            label = np.array(label).astype(np.float32)
-            label[label < 1] = 0.0
-            label[label>=1] = 1.0
-
-            label = self.ToTensor(label)
+            # label = label.resize((h, w), Image.BILINEAR)
+            # label = np.array(label).astype(np.float32)
+            # label[label < 1] = 0.0
+            # label[label>=1] = 1.0
+            #label = self.ToTensor(label)
+            label = self.transform(label)
+            label[label<(1.0/255.0)] = 0.0
+            label[label>=(1.0/255.0)] = 1.0
         return image, label
 
 class hedBSDS(object):
@@ -102,8 +104,7 @@ class hedBSDS(object):
             # transforms.RandomHorizontalFlip(0.5),
             # transforms.RandomAffine(5),
             transforms.Resize((img_size, img_size), Image.BICUBIC),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.ToTensor()
         ]
         return transform
 
