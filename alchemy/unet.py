@@ -19,18 +19,19 @@ import torch
 import torchvision
 import torch.nn as nn
 from samhi.auxiliary import AuxFunction as AuxF
-from samhi.auxiliary import FireInfo
 from dataset.hed_bsds import hedBSDS
 from net.Unet import UNet
 import os
+from tensorboardX import SummaryWriter
 
 class Alchemy(object):
     def __init__(self,image_size=(3,224,224),classes=1,lr=0.01):
-        self.gourd = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'gourd')
+        self.gourd = os.path.join(AuxF.project_path(), 'gourd')
+        self.boy = os.path.join(AuxF.project_path(), 'boy')
         self.num_class = classes
         self.image_size = image_size
         hedbsds = hedBSDS()
-        self.loader = hedbsds.get_loader(4,self.image_size[1])
+        self.loader = hedbsds.get_loader(1,self.image_size[1])
         print('init dataset done...')
         self.device = AuxF.device()
         self.net = UNet(self.image_size[0], classes)
@@ -39,13 +40,14 @@ class Alchemy(object):
         self.criterion = nn.BCEWithLogitsLoss()
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr, momentum=0.9)
         self.lr_scheduler = self.LRScheduler()
+        self.summary = SummaryWriter(logdir=AuxF.log_name(self.boy, 'unet'))
 
     def LRScheduler(self):
         return AuxF.WarmRestart(self.optimizer,
                                     T_max=60*len(self.loader), factor=0.75)
 
     def Train(self, epochs):
-
+        data_length = len(self.loader)
         for epoch in range(epochs):
             for i , (image, label) in enumerate(self.loader):
                 image = image.to(self.device)
@@ -56,10 +58,19 @@ class Alchemy(object):
                 loss.backward()
                 self.optimizer.step()
                 self.lr_scheduler.step()
+                if i%2==0:
+                    n_iter = epoch*data_length+i+1
+                    self.summary.add_scalar('unet/loss', loss.item(),n_iter)
+                    self.summary.add_scalar('unet/lr', AuxF.get_lr(self.optimizer), n_iter)
+                    print('loss', loss.item())
+                if i%4 == 0:
+                    n_iter = epoch*data_length+1+i
+                    im = torchvision.utils.make_grid(image.detach().cpu(), normalize=True)
+                    self.summary.add_image('unet/image', im, n_iter)
+                    hot = torchvision.utils.make_grid(out.detach().cpu(),normalize=True)
+                    self.summary.add_image('unet/final', hot, n_iter)
 
-                if i%200==0:
-                    print("Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}"
-                          .format(epoch+1, epochs, i+1, len(self.loader), loss.item()))
+
             if epoch%10 ==0:
                 self.save_model(epoch)
 

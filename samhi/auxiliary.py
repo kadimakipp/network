@@ -99,7 +99,19 @@ class AuxFunction(object):
 
         return torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=cosineAnnealing)
 
+    @staticmethod
+    def log_name(dir_name,net_name,comment=''):
+        name = os.path.join(dir_name, net_name)
+        import socket
+        from datetime import datetime
+        current_time = datetime.now().strftime('%b%d_%H-%M-%S')
+        logdir = os.path.join(
+            name, current_time + '_' + socket.gethostname() + comment)
+        return logdir
 
+    @staticmethod
+    def project_path():
+        return os.path.dirname(os.path.dirname(__file__))
 
 
 import matplotlib.pyplot as plt
