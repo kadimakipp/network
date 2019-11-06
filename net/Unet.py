@@ -99,10 +99,11 @@ class UNet(nn.Module):
         return output
 
 def main():
-    unet = UNet(3, 2)
-    input = torch.randn([1,3,224,224])
+    unet = UNet(3, 3)
+    input = torch.randn([1,3,640,480])
     out = unet(input)
     print(unet)
+    print(out.shape)
 
 
 
