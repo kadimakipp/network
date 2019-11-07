@@ -105,8 +105,8 @@ def NLL_fun():
     target = torch.empty(N, 3,3,dtype=torch.long).random_(0,C)
     input = m(data)
     print('----------------2D-----------------')
-    print('input: ', input)
-    print('target', target)
+    print('input: ', input, input.shape)
+    print('target:', target, target.shape)
     print('2D result:', loss_f(input, target))
     return output
 

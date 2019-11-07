@@ -92,10 +92,14 @@ class Alchemy(object):
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         print('Load checkpoint at epoch %d.' % start_epoch)
 
-def main():
+def main(train='train'):
     torch.cuda.empty_cache()
     unet = Alchemy()
-    unet.Train(180)
+    if train in ['train']:
+        unet.Train(180)
+    else:
+        unet.load_model()
+        #unet.hot_map()
 
 
 if __name__ == "__main__":

@@ -26,8 +26,11 @@ import cv2
 '''
 pick and place dataset only suction way
 '''
-
+DEP_MEAN = 0.4298285107375372
+DEP_STD = 0.07313572115981952
 class Suction(Dataset):
+
+
     def __init__(self, root, transform, train='train', use_im=False):
         super(Suction, self).__init__()
         self.root = root
@@ -47,7 +50,6 @@ class Suction(Dataset):
         self.__label = os.path.join(self.root, 'label')
         self.__intrinsics = os.path.join(self.root, 'camera-intrinsics')
 
-
     def __get_intrinsics(self, root):
         with open(root, 'r') as f:
             intr = f.readlines()
@@ -58,25 +60,22 @@ class Suction(Dataset):
             f.close()
         return intrinsics
 
-
-
     def __len__(self):
         return len(self.ids)
 
     def __getitem__(self, index):
         id = self.ids[index]
-        intr_path = os.path.join(self.__intrinsics, id+'.txt')
-        intrinsics = self.__get_intrinsics(intr_path)
         label_path = os.path.join(self.__label, id+'.png')
         label = Image.open(label_path)
         label = np.array(label)
         label[label==128] = 1
         label[label==255] = 2
-        label = torch.from_numpy(label).unsqueeze(0)
+        label = torch.from_numpy(label)
 
         depth_path = os.path.join(self.__depth, id+'.png')
         depth = Image.open(depth_path)
         depth = np.array(depth).astype(np.float)/1e+4
+        depth = (depth-DEP_MEAN)/DEP_STD
         #TODO: image and depth align
         depth = torch.from_numpy(depth).unsqueeze(0)
 
@@ -118,10 +117,11 @@ class Pick(object):
         )
 
 import matplotlib.pyplot as plt
-def main():
+
+def check_loader():
     plt.figure()
     pick = Pick()
-    loader = pick.get_loader(1,448)
+    loader = pick.get_loader(1, 448)
     print(len(loader))
     for i, (images, depths, labels) in enumerate(loader):
         print(images.shape, depths.shape, labels.shape)
@@ -130,17 +130,46 @@ def main():
         dis_img = dis_img * 255
         plt.imshow(dis_img.astype(np.uint8))
         plt.show()
-        dis_lab = labels[0].numpy().squeeze()*127
+        dis_lab = labels[0].numpy() * 127
         plt.imshow(dis_lab.astype(np.uint8))
         plt.show()
-        dis_dep = depths[0].numpy().squeeze()
+        dis_dep = depths[0].numpy().squeeze()*DEP_STD+DEP_MEAN
         plt.imshow(dis_dep)
         plt.show()
         break
+
+def compute_depth_mean_std(root):
+    index = os.path.join(root, 'train-split.txt')
+    __depth = os.path.join(root, 'depth-input')
+    with open(index, 'r') as f:
+        ids = f.readlines()
+        ids = [os.path.join(__depth,s.strip('\n')+'.png') for s in ids]
+        f.close()
+    im_mean = []
+    for d in ids:
+        depth = Image.open(d)
+        print(d)
+        depth = np.array(depth).astype(np.float)/1e+4
+        im_mean.append(depth.mean())
+
+    else:
+        im_mean =np.array(im_mean)
+        mean = im_mean.mean()
+        std = np.power(np.power(im_mean-mean, 2).mean(), 0.5)
+        print("mean ={} \nstd = {}".format(mean, std))
+
+
+
+def main(code = "compute"):
+    if code in ['compute']:
+        root = '/media/kipp/work/Datas/Pick-and-Place/suction_data'
+        compute_depth_mean_std(root)
+    else:
+        check_loader()
+
 
 
 
 if __name__ == "__main__":
     import fire
-
     fire.Fire(main)
