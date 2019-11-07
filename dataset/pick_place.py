@@ -72,13 +72,13 @@ class Suction(Dataset):
         label = np.array(label)
         label[label==128] = 1
         label[label==255] = 2
-        label = torch.from_numpy(label)
+        label = torch.from_numpy(label).unsqueeze(0)
 
         depth_path = os.path.join(self.__depth, id+'.png')
         depth = Image.open(depth_path)
         depth = np.array(depth).astype(np.float)/1e+4
         #TODO: image and depth align
-        depth = torch.from_numpy(depth)
+        depth = torch.from_numpy(depth).unsqueeze(0)
 
         if self.use_im:
             im_path = os.path.join(self.__color, id+'.png')
@@ -124,15 +124,16 @@ def main():
     loader = pick.get_loader(1,448)
     print(len(loader))
     for i, (images, depths, labels) in enumerate(loader):
+        print(images.shape, depths.shape, labels.shape)
         dis_img = images[0].numpy().transpose(1, 2, 0)
         dis_img = dis_img * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]
         dis_img = dis_img * 255
         plt.imshow(dis_img.astype(np.uint8))
         plt.show()
-        dis_lab = labels[0].numpy()*127
+        dis_lab = labels[0].numpy().squeeze()*127
         plt.imshow(dis_lab.astype(np.uint8))
         plt.show()
-        dis_dep = depths[0].numpy()
+        dis_dep = depths[0].numpy().squeeze()
         plt.imshow(dis_dep)
         plt.show()
         break

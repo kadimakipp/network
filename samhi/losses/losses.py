@@ -45,8 +45,6 @@ def CrossEntropy_fun():
     target=torch.from_numpy(np.array([0,1,2])).type(torch.LongTensor)
     output= loss_f(input, target)
 
-
-
     #numpy
     batch = input[0].detach().numpy()
     target_1 = target[0].numpy()
