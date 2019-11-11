@@ -84,7 +84,18 @@ class Metric(object):
         A = (TP+TN)/(TP+FP+FN+TN)
         return P, R, F1, A
 
-    def 
+    @classmethod
+    def mAP(cls, output, target):
+        """
+        由PASCAL VOC challenge 提出来的计算方法，首先设定一组阈值[0,0.1,0.2,...,1.0],
+        然后对于recall大于每一个阈值（比如recall>0.3），得到一个最大precision,最终得到11个precision，
+        AP就是这11个precision的平均值，---11-point interpolated average precision。​
+        2010年后提出新的方法，假设这N个样本中有M个正例，那么会得到M个recall值（1/M, 2/M, ..., M/M）,
+        对于每个recall值r，可以计算出对应（r' > r）的最大precision，然后对这M个precision值取平均即得到最后的AP值。计算方法如下：​
+        [reference1](https://medium.com/@hfdtsinghua/calculate-mean-average-precision-map-for-multi-label-classification-b082679d31be)
+        [reference2](https://towardsdatascience.com/implementation-of-mean-average-precision-map-with-non-maximum-suppression-f9311eb92522)
+        [reference3](https://github.com/Cartucho/mAP)
+        """
 
 
 
