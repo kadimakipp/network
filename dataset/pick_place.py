@@ -26,8 +26,8 @@ import cv2
 '''
 pick and place dataset only suction way
 '''
-DEP_MEAN = 0.4298285107375372
-DEP_STD = 0.07313572115981952
+DEP_MEAN = 0.4313711812112666
+DEP_STD = 0.06876936556987262
 class Suction(Dataset):
 
 
@@ -108,6 +108,8 @@ class Pick(object):
 
 
     def get_loader(self, batch_size, img_size, mode='train', use_im=True):
+        if mode not in ['train']:
+            self.shuffle=False
         transform= self.Transform(img_size)
         return torch.utils.data.DataLoader(
             Suction(self.root, transform=transform,train=mode, use_im=use_im),
@@ -121,7 +123,7 @@ import matplotlib.pyplot as plt
 def check_loader():
     plt.figure()
     pick = Pick()
-    loader = pick.get_loader(1, 448)
+    loader = pick.get_loader(1, 448, mode='test')
     print(len(loader))
     for i, (images, depths, labels) in enumerate(loader):
         print(images.shape, depths.shape, labels.shape)
@@ -156,11 +158,11 @@ def compute_depth_mean_std(root):
         im_mean =np.array(im_mean)
         mean = im_mean.mean()
         std = np.power(np.power(im_mean-mean, 2).mean(), 0.5)
-        print("mean ={} \nstd = {}".format(mean, std))
+        print("DEP_MEAN = {} \nDEP_STD = {}".format(mean, std))
 
 
 
-def main(code = "compute"):
+def main(code = "comput"):
     if code in ['compute']:
         root = '/media/kipp/work/Datas/Pick-and-Place/suction_data'
         compute_depth_mean_std(root)
