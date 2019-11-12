@@ -99,110 +99,42 @@ class Metric(object):
         """
         pass
 
+    """
+    [reference](https://arxiv.org/abs/1704.06857)
+    Semantic Segmentation Metric
+    共k+1类, background+k classes
+    P_ij  i为GT j为pred 表示属于i类预测为j类。
+    P_ii  TP(True positive)
+    P_ij  FP(False positive)
+    P_ji  FN(False negative)
+    P_jj  TN(True negative)
+    """
+    @classmethod
+    def PA_old(cls, output, target):
+        """Pixel Accuracy: 预测正确的占所有像素的比值"""
+        _, indices = output.max(dim=1)
+        row = target.shape[1]
+        col = target.shape[2]
+        total = row*col
+        TP = indices.eq(target).sum().numpy()
+        return TP/total
 
-"""
-TODO: merge to Metric
-"""
-"""
-multi class mAP
-VOC mAP Castration Edition
-import matplotlib.pyplot as plt
-# No threshold
-def PR(target, positive):
-    """
-    P = TP/(TP+FP)
-    R = TP/(TP+FN)=TP/positive
-    """
-    TP = target==1
-    TP = TP.sum().float()
-    TP_add_FP = target.shape[0]
-    P = TP/TP_add_FP
-    R = TP/positive
-    return P,R
-
-def AP(target):
-    """
-    Average Precision
-    """
-    positive = target==1
-    positive = positive.sum().float()
-    precision=[]
-    recall=[]
-    for i in range(1,target.shape[0]+1):
-        label = target[:i]
-        P,R = PR(label, positive)
-        precision.append(P.numpy())
-        recall.append(R.numpy())
-    # # smooth
-    for i in range(len(precision)-1)[::-1]:
-        precision[i] = max(precision[i+1], precision[i])
-
-    #calc AP, PR cure must be on the point(0,0)
-    #method 1: error too big
-    ap = 0
-    for i in range(len(precision)-1)[::-1]:
-        delta_x = recall[i+1]-recall[i]
-        ap += delta_x*precision[i+1]
-    else:
-        # this moment i = 0
-        delta_x = recall[i] - 0
-        ap += delta_x*precision[i]
-    #method 2: another function for 
-    return ap, precision, recall
+    @classmethod
+    def PA(cls, output, target, threshold):
+        """ PA_old threshold edition"""
+        out, indices = output.max(dim=1)
+        mask = out.gt(threshold)# > gt < lt
+        row = target.shape[1]
+        col = target.shape[2]
+        total = row * col
+        TP = indices[mask].eq(target[mask]).sum().numpy()
+        return TP/total
 
 
-def mAP(output, target, plot=False):
-    """
-    mAP mean average precision
-    """
-    # sort
-    output, indices = torch.sort(output, dim=0, descending=True)
-    #get each class AP
-    classes = target.shape[1]
-    aps = []
-    if plot:
-        plt.figure()
-    for i in range(classes):
-        label = target[:,i][indices[:,i]]
-        ap, p, r = AP(label)
-        aps.append(ap)
-        if plot:
-            plt.plot(np.array(r), np.array(p), '-o')
-    aps = np.array(aps)
-    map = aps.mean()
-    if plot:
-        plt.show()
-    return map, aps
 
 
-def main():
-    output = torch.tensor([[0.2,0.6,0.1,0.8],
-                           [0.4,0.9,0.8,0.6],
-                           [0.8,0.4,0.5,0.7]])
-    target = torch.tensor([[0,1,1,1],
-                           [0,0,1,0],
-                           [1,1,0,0]])
-    map, aps = mAP(output,target, plot=True)
-    print(map,'\n',aps)
-    #example 2
-    output = torch.tensor([[0.3408, 0.1951, 0.2455, 0.2186],
-                           [0.2531, 0.2994, 0.2367, 0.2108],
-                           [0.2008, 0.3744, 0.2102, 0.2146]])
-    target = torch.tensor([[1, 0, 0, 1],
-                           [1, 1, 0, 0],
-                           [0, 1, 1, 1]])
-    map, aps = mAP(output, target, plot=True)
-    print(map,'\n',aps)
-"""
-def multi_class_mAP(output, target):
-    """
-    [reference]:
-    https://medium.com/@jonathan_hui/map-mean-average-precision-for-object-detection-45c121a31173
-    https://medium.com/@hfdtsinghua/calculate-mean-average-precision-map-for-multi-label-classification-b082679d31be
-    https://github.com/luliyucoordinate/eval_voc/blob/master/eval_voc.py
-    """
-    #TODO:
-    pass
+
+
 
 """
 Semantic Segmentation Metric
@@ -215,6 +147,7 @@ https://blog.csdn.net/u014593748/article/details/71698246
 
 
 def main():
+    #classification
     output = torch.empty(1,3,5,5).random_(2)
     target = torch.empty(1,5,5).random_(3)
     right = Metric.error(output, target)
@@ -229,6 +162,37 @@ def main():
     P, R, F1, A = Metric.PR(output, target)
     print(P, R, F1, A)
 
+    #Semantic Segmentation
+    k = 3
+    # output = torch.empty(1,k,5,5).random_(10).float()/10
+    # target = torch.empty(1,5,5).random_(k) #generator data
+    # print(output, '\n', target)
+    output = torch.tensor([[[[0.9000, 0.5000, 0.1000, 0.0000, 0.2000],
+              [0.9000, 0.4000, 0.4000, 0.1000, 0.9000],
+              [0.0000, 0.7000, 0.9000, 0.4000, 0.0000],
+              [0.2000, 0.8000, 0.2000, 0.6000, 0.6000],
+              [0.1000, 0.4000, 0.6000, 0.3000, 0.9000]],
+
+             [[0.1000, 0.5000, 0.2000, 0.4000, 0.7000],
+              [0.1000, 0.6000, 0.4000, 0.5000, 0.9000],
+              [0.2000, 0.6000, 0.5000, 0.9000, 0.6000],
+              [0.4000, 0.7000, 0.2000, 0.3000, 0.7000],
+              [0.5000, 0.3000, 0.6000, 0.4000, 0.1000]],
+
+             [[0.2000, 0.3000, 0.8000, 0.1000, 0.6000],
+              [0.1000, 0.9000, 0.1000, 0.1000, 0.7000],
+              [0.5000, 0.3000, 0.6000, 0.1000, 0.8000],
+              [0.2000, 0.6000, 0.1000, 0.2000, 0.7000],
+              [0.2000, 0.9000, 0.4000, 0.5000, 0.7000]]]])
+    target = torch.tensor([[[0., 2., 1., 1., 1.],
+             [0., 1., 0., 1., 1.],
+             [1., 2., 0., 2., 0.],
+             [2., 1., 1., 0., 1.],
+             [1., 2., 1., 2., 2.]]])
+    PA = Metric.PA_old(output, target)
+    print(PA)
+    PA = Metric.PA(output,target, 0.1)
+    print(PA)
 
 
 
