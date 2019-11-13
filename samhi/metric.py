@@ -103,6 +103,7 @@ class Metric(object):
     [reference](https://arxiv.org/abs/1704.06857)
     Semantic Segmentation Metric
     共k+1类, background+k classes
+    有一个混淆矩阵的概念用的比较好
     P_ij  i为GT j为pred 表示属于i类预测为j类。
     P_ii  TP(True positive)
     P_ij  FP(False positive)
@@ -130,8 +131,10 @@ class Metric(object):
         TP = indices[mask].eq(target[mask]).sum().numpy()
         return TP/total
 
-
-
+    @classmethod
+    def MAP(cls, output, target, threshold):
+        """Mean Pixel Accuracy:"""
+        pass
 
 
 
@@ -191,7 +194,7 @@ def main():
              [1., 2., 1., 2., 2.]]])
     PA = Metric.PA_old(output, target)
     print(PA)
-    PA = Metric.PA(output,target, 0.1)
+    PA = Metric.PA(output,target, 0.6)
     print(PA)
 
 
