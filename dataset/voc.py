@@ -180,7 +180,7 @@ import matplotlib.pyplot as plt
 #     print(paths)
 
 import cv2
-print(cv2)
+print(cv2.__file__)
 def img_writer(img, boxes, cls):
     dis_img = img.numpy().transpose(1,2,0)
     dis_img = (dis_img* [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406])*255
