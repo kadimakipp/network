@@ -96,7 +96,7 @@ def main():
     MPA = metric.Pixel_Accuracy_Class()
     MIoU = metric.Mean_Intersection_over_Union()
     FWIoU = metric.Frequency_Weighted_Intersection_over_Union()
-    print('PA: {}\n MPA: {}\n MIoU: {}\n FWIoU: {}\n'.format( PA,MPA,MIoU,FWIoU))
+    print('PA: {}\nMPA: {}\nMIoU: {}\nFWIoU: {}\n'.format(PA,MPA,MIoU,FWIoU))
 
     pred = np.random.randint(classes, size=(batch_size,5,5))
     tar = np.random.randint(classes, size=(batch_size, 5,5))
@@ -106,7 +106,7 @@ def main():
     MPA = metric.Pixel_Accuracy_Class()
     MIoU = metric.Mean_Intersection_over_Union()
     FWIoU = metric.Frequency_Weighted_Intersection_over_Union()
-    print('PA: {}\n MPA: {}\n MIoU: {}\n FWIoU: {}\n'.format(PA, MPA, MIoU, FWIoU))
+    print('PA: {}\nMPA: {}\nMIoU: {}\nFWIoU: {}\n'.format(PA,MPA,MIoU,FWIoU))
 
 
 
