@@ -48,8 +48,28 @@ class VOC_Auxiliary(object):
     def name2ind(self, name):
         return self.__name2int[name]
 
-    def ind2name(self, ind):
+    def ind2name(self, ind:int):
         return self.__int2name[ind]
+
+    def bndbox2box(self, dict:dict):
+        xmin = int(dict['xmin'])
+        ymin = int(dict['ymin'])
+        xmax = int(dict['xmax'])
+        ymax = int(dict['ymax'])
+        return [xmin, ymin, xmax, ymax]
+
+    def parse(self, objects):
+        if not isinstance(objects, list):
+            objects = [objects]
+        boxes = []
+        clses = []
+        for object in objects:
+            c = self.name2ind(object['name'])
+            b = self.bndbox2box(object['bndbox'])
+            boxes.append(b)
+            clses.append(c)
+        return boxes, clses
+
 
 class PascalVOC(Dataset):
     def __init__(self, root, transform,years='2007', mode='train',  segmentation=False):
@@ -59,6 +79,7 @@ class PascalVOC(Dataset):
         self.years=years
         self.mode = mode
         self.segmentation=segmentation
+        self.__aux = VOC_Auxiliary()
         if self.years not in ['2007', '2012']:
             raise RuntimeError("years must belong to ['2007', '2012']")
         if self.mode not in ["train", "trainval", "val"]:
@@ -91,12 +112,16 @@ class PascalVOC(Dataset):
            tuple: (image, target) where target is a dictionary of the XML tree.
        """
         img = Image.open(self.images[index]).convert('RGB')
-        target = self.parse_voc_xml(
+        anns = self.parse_voc_xml(
             ET.parse(self.annotations[index]).getroot())
-        print(img.size)
-        # print(target['annotation'])
-        print(len(target['annotation']['object']))
-        return 1, 2
+
+        boxes, clses = self.__aux.parse(anns['annotation']['object'])
+        boxes = torch.from_numpy(np.array(boxes))
+        clses = torch.from_numpy(np.array(clses))
+
+        img = self.transform(img)
+
+        return img, boxes,clses
 
     def parse_voc_xml(self, node):
         voc_dict = {}
@@ -124,19 +149,19 @@ class PascalVOC(Dataset):
 
 class VOC(object):
     def __init__(self):
-        self.root = "/media/kipp/work/Datas/VOCdevkit"
+        self.root = "/media/kipp/data/DATASET/VOC/VOCdevkit"
         self.num_work = 4
         self.shuffle = True
 
     def Transform(self, img_size):
-        transform = [
+        transform = transforms.Compose([
             # transforms.RandomCrop(224),
             # transforms.RandomHorizontalFlip(0.5),
             # transforms.RandomAffine(5),
-            transforms.Resize((img_size, img_size), Image.BICUBIC),
+            #transforms.Resize((img_size, img_size), Image.BICUBIC),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ]
+        ])
         return transform
 
     def get_loader(self, batch_size, img_size, mode="all"):
@@ -149,14 +174,34 @@ class VOC(object):
         )
 
 import matplotlib.pyplot as plt
-def main():
+# print(sys.path)
+# if 'python2.7' in sys.path:
+#     paths = [path for path in sys.path if 'python2.7' in path]
+#     print(paths)
 
+import cv2
+print(cv2)
+def img_writer(img, boxes, cls):
+    dis_img = img.numpy().transpose(1,2,0)
+    dis_img = (dis_img* [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406])*255
+    dis_img = dis_img.astype(np.uint8)
+    boxes = boxes.numpy()
+
+    for box in boxes:
+        cv2.rectangle(dis_img, (box[0], box[1]), (box[2],box[3]),(0, 255, 0), 2)
+    cv2.imshow("img",cv2.cvtColor(dis_img, cv2.COLOR_RGB2BGR))
+    cv2.waitKey(0)
+    return dis_img
+def main():
     plt.figure()
     voc = VOC()
     loader = voc.get_loader(1, 224, "train")
     print(len(loader))
-    for i, (images, labels) in enumerate(loader):
-
+    for i, (images, boxes, cls) in enumerate(loader):
+        print(images.shape, boxes.shape, cls.shape)
+        dis_img = img_writer(images[0], boxes[0], cls[0])
+        plt.imshow(dis_img)
+        plt.show()
         break
 
 
