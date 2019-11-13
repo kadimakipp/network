@@ -22,7 +22,9 @@ from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
 from pycocotools.coco import COCO as COCOtool
-
+"""
+https://github.com/BobLiu20/YOLOv3_PyTorch/blob/master/common/coco_dataset.py
+"""
 
 class COCO(Dataset):
     def __init__(self, root, transform, target_transform,train='train'):
