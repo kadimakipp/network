@@ -23,6 +23,9 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 from PIL import Image
+import cv2
+print(cv2.__file__)
+
 import torchvision
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
@@ -112,6 +115,7 @@ class PascalVOC(Dataset):
            tuple: (image, target) where target is a dictionary of the XML tree.
        """
         img = Image.open(self.images[index]).convert('RGB')
+        # img = cv2.imread(self.images[index])
         anns = self.parse_voc_xml(
             ET.parse(self.annotations[index]).getroot())
 
@@ -178,20 +182,18 @@ import matplotlib.pyplot as plt
 # if 'python2.7' in sys.path:
 #     paths = [path for path in sys.path if 'python2.7' in path]
 #     print(paths)
-
-import cv2
-print(cv2.__file__)
 def img_writer(img, boxes, cls):
     dis_img = img.numpy().transpose(1,2,0)
     dis_img = (dis_img* [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406])*255
     dis_img = dis_img.astype(np.uint8)
+    dis_img = cv2.cvtColor(dis_img, cv2.COLOR_RGB2BGR)
     boxes = boxes.numpy()
-
     for box in boxes:
         cv2.rectangle(dis_img, (box[0], box[1]), (box[2],box[3]),(0, 255, 0), 2)
-    cv2.imshow("img",cv2.cvtColor(dis_img, cv2.COLOR_RGB2BGR))
+    cv2.imshow("img",dis_img)
     cv2.waitKey(0)
-    return dis_img
+    return cv2.cvtColor(dis_img, cv2.COLOR_BGR2RGB)
+
 def main():
     plt.figure()
     voc = VOC()
