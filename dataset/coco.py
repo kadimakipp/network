@@ -38,8 +38,8 @@ class COCOAux(object):
          'scissors','teddy bear','hair drier','toothbrush')
         self.__name2int = dict(zip(self.__classes__, range(len(self.__classes__))))
         self.__int2name = dict(zip(range(len(self.__classes__)), self.__classes__))
-
-        self.categroies = [{'name': 'person', 'id': 1, 'supercategory': 'person'}, {'name': 'bicycle', 'id': 2, 'supercategory': 'vehicle'},
+        #TODO: map categories to __classes or to new ids
+        self.categories = [{'name': 'person', 'id': 1, 'supercategory': 'person'}, {'name': 'bicycle', 'id': 2, 'supercategory': 'vehicle'},
                            {'name': 'car', 'id': 3, 'supercategory': 'vehicle'}, {'name': 'motorcycle', 'id': 4, 'supercategory': 'vehicle'},
                            {'name': 'airplane', 'id': 5, 'supercategory': 'vehicle'}, {'name': 'bus', 'id': 6, 'supercategory': 'vehicle'},
                            {'name': 'train', 'id': 7, 'supercategory': 'vehicle'}, {'name': 'truck', 'id': 8, 'supercategory': 'vehicle'},
@@ -79,7 +79,6 @@ class COCOAux(object):
                            {'name': 'clock', 'id': 85, 'supercategory': 'indoor'}, {'name': 'vase', 'id': 86, 'supercategory': 'indoor'},
                            {'name': 'scissors', 'id': 87, 'supercategory': 'indoor'}, {'name': 'teddy bear', 'id': 88, 'supercategory': 'indoor'},
                            {'name': 'hair drier', 'id': 89, 'supercategory': 'indoor'}, {'name': 'toothbrush', 'id': 90, 'supercategory': 'indoor'}]
-
 
     def name2ind(self, name):
         return self.__name2int[name]
