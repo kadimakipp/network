@@ -119,13 +119,16 @@ class PascalVOC(Dataset):
         anns = self.parse_voc_xml(
             ET.parse(self.annotations[index]).getroot())
 
-        boxes, clses = self.__aux.parse(anns['annotation']['object'])
-        boxes = torch.from_numpy(np.array(boxes))
-        clses = torch.from_numpy(np.array(clses))
-
+        boxes_list, clses_list = self.__aux.parse(anns['annotation']['object'])
+        boxes = np.zeros((32, 4))
+        clses = np.zeros(32)
+        for i, (box, cls) in enumerate(zip(boxes_list,clses_list)):
+            boxes[i] = np.array(box)
+            clses[i] = cls
+        boxes = torch.from_numpy(boxes)
+        clses = torch.from_numpy(clses)
         img = self.transform(img)
-
-        return img, boxes,clses
+        return img, boxes, clses
 
     def parse_voc_xml(self, node):
         voc_dict = {}
@@ -146,14 +149,9 @@ class PascalVOC(Dataset):
                 voc_dict[node.tag] = text
         return voc_dict
 
-
-
-
-
-
 class VOC(object):
     def __init__(self):
-        self.root = "/media/kipp/data/DATASET/VOC/VOCdevkit"
+        self.root = "/media/kipp/work/Datas/VOCdevkit"
         self.num_work = 4
         self.shuffle = True
 
@@ -178,6 +176,7 @@ class VOC(object):
         )
 
 import matplotlib.pyplot as plt
+from samhi.colors import RGB_COLORS
 # print(sys.path)
 # if 'python2.7' in sys.path:
 #     paths = [path for path in sys.path if 'python2.7' in path]
@@ -187,11 +186,13 @@ def img_writer(img, boxes, cls):
     dis_img = (dis_img* [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406])*255
     dis_img = dis_img.astype(np.uint8)
     dis_img = cv2.cvtColor(dis_img, cv2.COLOR_RGB2BGR)
-    boxes = boxes.numpy()
-    for box in boxes:
-        cv2.rectangle(dis_img, (box[0], box[1]), (box[2],box[3]),(0, 255, 0), 2)
-    cv2.imshow("img",dis_img)
-    cv2.waitKey(0)
+    boxes = boxes.int().numpy()
+    cls = cls.numpy().astype(np.uint8)
+    for box, c in zip(boxes, cls):
+        if c == 0:break
+        cv2.rectangle(dis_img, (box[0], box[1]), (box[2],box[3]),RGB_COLORS[c], 2)
+    # cv2.imshow("img",dis_img)
+    # cv2.waitKey(0)
     return cv2.cvtColor(dis_img, cv2.COLOR_BGR2RGB)
 
 def main():
@@ -205,8 +206,6 @@ def main():
         plt.imshow(dis_img)
         plt.show()
         break
-
-
 
 if __name__ == "__main__":
     import fire
