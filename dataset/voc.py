@@ -151,20 +151,20 @@ class PascalVOC(Dataset):
 
 class VOC(object):
     def __init__(self):
-        self.root = "/media/kipp/work/Datas/VOCdevkit"
+        self.root = "/media/kipp/data/DATASET/VOC/VOCdevkit"
         self.num_work = 4
         self.shuffle = True
 
     def Transform(self, img_size):
-        transform = transforms.Compose([
+        transform = [
             # transforms.RandomCrop(224),
             # transforms.RandomHorizontalFlip(0.5),
             # transforms.RandomAffine(5),
             #transforms.Resize((img_size, img_size), Image.BICUBIC),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-        return transform
+        ]
+        return transforms.Compose(transform)
 
     def get_loader(self, batch_size, img_size, mode="all"):
         transform = self.Transform(img_size)
