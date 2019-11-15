@@ -47,6 +47,7 @@ class Suction(Dataset):
 
         self.__color = os.path.join(self.root, 'color-input')
         self.__depth = os.path.join(self.root, 'depth-input')
+        self.__depth_back = os.path.join(self.root, 'depth-background')
         self.__label = os.path.join(self.root, 'label')
         self.__intrinsics = os.path.join(self.root, 'camera-intrinsics')
 
@@ -73,11 +74,16 @@ class Suction(Dataset):
         label = torch.from_numpy(label)
 
         depth_path = os.path.join(self.__depth, id+'.png')
+        depth_back_path = os.path.join(self.__depth_back, id+'.png')
         depth = Image.open(depth_path)
+        depth_back = Image.open(depth_back_path)
         depth = np.array(depth).astype(np.float)/1e+4
-        depth = (depth-DEP_MEAN)/DEP_STD
-        #TODO: image and depth align
+        depth_back = np.array(depth_back).astype(np.float)/1e+4
+        # depth = (depth-DEP_MEAN)/DEP_STD
+        depth = depth - depth_back
         depth = torch.from_numpy(depth).unsqueeze(0)
+
+
 
         if self.use_im:
             im_path = os.path.join(self.__color, id+'.png')
@@ -135,7 +141,7 @@ def check_loader():
         dis_lab = labels[0].numpy() * 127
         plt.imshow(dis_lab.astype(np.uint8))
         plt.show()
-        dis_dep = depths[0].numpy().squeeze()*DEP_STD+DEP_MEAN
+        dis_dep = depths[0].numpy().squeeze()#*DEP_STD+DEP_MEAN
         plt.imshow(dis_dep)
         plt.show()
         break

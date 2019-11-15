@@ -31,7 +31,7 @@ if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
     import xml.etree.ElementTree as ET
-# torchvision.datasets.VOCDetection()
+#torchvision.datasets.VOCDetection()
 
 """
 https://github.com/TencentYoutuResearch/ObjectDetection-OneStageDet/tree/master/yolo
