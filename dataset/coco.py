@@ -27,64 +27,73 @@ https://github.com/BobLiu20/YOLOv3_PyTorch/blob/master/common/coco_dataset.py
 """
 class COCOAux(object):
     def __init__(self):
-        self.__classes__ = ('__background__', # always index 0
-         'person','bicycle','car','motorbike','aeroplane','bus','train','truck','boat','traffic light','fire hydrant',
-         'stop sign','parking meter','bench','bird','cat','dog','horse','sheep','cow','elephant','bear','zebra',
-         'giraffe','backpack','umbrella','handbag','tie','suitcase','frisbee','skis','snowboard','sports ball',
-         'kite','baseball bat','baseball glove','skateboard','surfboard','tennis racket','bottle','wine glass','cup',
-         'fork','knife','spoon','bowl','banana','apple','sandwich','orange','broccoli','carrot','hot dog','pizza',
-         'donut','cake','chair','sofa','pottedplant','bed','diningtable','toilet','tvmonitor','laptop','mouse',
-         'remote','keyboard','cell phone','microwave','oven','toaster','sink','refrigerator','book','clock','vase',
-         'scissors','teddy bear','hair drier','toothbrush')
-        self.__name2int = dict(zip(self.__classes__, range(len(self.__classes__))))
-        self.__int2name = dict(zip(range(len(self.__classes__)), self.__classes__))
-        #TODO: map categories to __classes or to new ids
-        self.categories = [{'name': 'person', 'id': 1, 'supercategory': 'person'}, {'name': 'bicycle', 'id': 2, 'supercategory': 'vehicle'},
-                           {'name': 'car', 'id': 3, 'supercategory': 'vehicle'}, {'name': 'motorcycle', 'id': 4, 'supercategory': 'vehicle'},
-                           {'name': 'airplane', 'id': 5, 'supercategory': 'vehicle'}, {'name': 'bus', 'id': 6, 'supercategory': 'vehicle'},
-                           {'name': 'train', 'id': 7, 'supercategory': 'vehicle'}, {'name': 'truck', 'id': 8, 'supercategory': 'vehicle'},
-                           {'name': 'boat', 'id': 9, 'supercategory': 'vehicle'}, {'name': 'traffic light', 'id': 10, 'supercategory': 'outdoor'},
-                           {'name': 'fire hydrant', 'id': 11, 'supercategory': 'outdoor'}, {'name': 'stop sign', 'id': 13, 'supercategory': 'outdoor'},
-                           {'name': 'parking meter', 'id': 14, 'supercategory': 'outdoor'}, {'name': 'bench', 'id': 15, 'supercategory': 'outdoor'},
-                           {'name': 'bird', 'id': 16, 'supercategory': 'animal'}, {'name': 'cat', 'id': 17, 'supercategory': 'animal'},
-                           {'name': 'dog', 'id': 18, 'supercategory': 'animal'}, {'name': 'horse', 'id': 19, 'supercategory': 'animal'},
-                           {'name': 'sheep', 'id': 20, 'supercategory': 'animal'}, {'name': 'cow', 'id': 21, 'supercategory': 'animal'},
-                           {'name': 'elephant', 'id': 22, 'supercategory': 'animal'}, {'name': 'bear', 'id': 23, 'supercategory': 'animal'},
-                           {'name': 'zebra', 'id': 24, 'supercategory': 'animal'}, {'name': 'giraffe', 'id': 25, 'supercategory': 'animal'},
-                           {'name': 'backpack', 'id': 27, 'supercategory': 'accessory'}, {'name': 'umbrella', 'id': 28, 'supercategory': 'accessory'},
-                           {'name': 'handbag', 'id': 31, 'supercategory': 'accessory'}, {'name': 'tie', 'id': 32, 'supercategory': 'accessory'},
-                           {'name': 'suitcase', 'id': 33, 'supercategory': 'accessory'}, {'name': 'frisbee', 'id': 34, 'supercategory': 'sports'},
-                           {'name': 'skis', 'id': 35, 'supercategory': 'sports'}, {'name': 'snowboard', 'id': 36, 'supercategory': 'sports'},
-                           {'name': 'sports ball', 'id': 37, 'supercategory': 'sports'}, {'name': 'kite', 'id': 38, 'supercategory': 'sports'},
-                           {'name': 'baseball bat', 'id': 39, 'supercategory': 'sports'}, {'name': 'baseball glove', 'id': 40, 'supercategory': 'sports'},
-                           {'name': 'skateboard', 'id': 41, 'supercategory': 'sports'}, {'name': 'surfboard', 'id': 42, 'supercategory': 'sports'},
-                           {'name': 'tennis racket', 'id': 43, 'supercategory': 'sports'}, {'name': 'bottle', 'id': 44, 'supercategory': 'kitchen'},
-                           {'name': 'wine glass', 'id': 46, 'supercategory': 'kitchen'}, {'name': 'cup', 'id': 47, 'supercategory': 'kitchen'},
-                           {'name': 'fork', 'id': 48, 'supercategory': 'kitchen'}, {'name': 'knife', 'id': 49, 'supercategory': 'kitchen'},
-                           {'name': 'spoon', 'id': 50, 'supercategory': 'kitchen'}, {'name': 'bowl', 'id': 51, 'supercategory': 'kitchen'},
-                           {'name': 'banana', 'id': 52, 'supercategory': 'food'}, {'name': 'apple', 'id': 53, 'supercategory': 'food'},
-                           {'name': 'sandwich', 'id': 54, 'supercategory': 'food'}, {'name': 'orange', 'id': 55, 'supercategory': 'food'},
-                           {'name': 'broccoli', 'id': 56, 'supercategory': 'food'}, {'name': 'carrot', 'id': 57, 'supercategory': 'food'},
-                           {'name': 'hot dog', 'id': 58, 'supercategory': 'food'}, {'name': 'pizza', 'id': 59, 'supercategory': 'food'},
-                           {'name': 'donut', 'id': 60, 'supercategory': 'food'}, {'name': 'cake', 'id': 61, 'supercategory': 'food'},
-                           {'name': 'chair', 'id': 62, 'supercategory': 'furniture'}, {'name': 'couch', 'id': 63, 'supercategory': 'furniture'},
-                           {'name': 'potted plant', 'id': 64, 'supercategory': 'furniture'}, {'name': 'bed', 'id': 65, 'supercategory': 'furniture'},
-                           {'name': 'dining table', 'id': 67, 'supercategory': 'furniture'}, {'name': 'toilet', 'id': 70, 'supercategory': 'furniture'},
-                           {'name': 'tv', 'id': 72, 'supercategory': 'electronic'}, {'name': 'laptop', 'id': 73, 'supercategory': 'electronic'},
-                           {'name': 'mouse', 'id': 74, 'supercategory': 'electronic'}, {'name': 'remote', 'id': 75, 'supercategory': 'electronic'},
-                           {'name': 'keyboard', 'id': 76, 'supercategory': 'electronic'}, {'name': 'cell phone', 'id': 77, 'supercategory': 'electronic'},
-                           {'name': 'microwave', 'id': 78, 'supercategory': 'appliance'}, {'name': 'oven', 'id': 79, 'supercategory': 'appliance'},
-                           {'name': 'toaster', 'id': 80, 'supercategory': 'appliance'}, {'name': 'sink', 'id': 81, 'supercategory': 'appliance'},
-                           {'name': 'refrigerator', 'id': 82, 'supercategory': 'appliance'}, {'name': 'book', 'id': 84, 'supercategory': 'indoor'},
-                           {'name': 'clock', 'id': 85, 'supercategory': 'indoor'}, {'name': 'vase', 'id': 86, 'supercategory': 'indoor'},
-                           {'name': 'scissors', 'id': 87, 'supercategory': 'indoor'}, {'name': 'teddy bear', 'id': 88, 'supercategory': 'indoor'},
-                           {'name': 'hair drier', 'id': 89, 'supercategory': 'indoor'}, {'name': 'toothbrush', 'id': 90, 'supercategory': 'indoor'}]
+        categories = [ {'name': 'person', 'id': 1, 'supercategory': 'person'}, {'name': 'bicycle', 'id': 2, 'supercategory': 'vehicle'},
+                       {'name': 'car', 'id': 3, 'supercategory': 'vehicle'}, {'name': 'motorcycle', 'id': 4, 'supercategory': 'vehicle'},
+                       {'name': 'airplane', 'id': 5, 'supercategory': 'vehicle'}, {'name': 'bus', 'id': 6, 'supercategory': 'vehicle'},
+                       {'name': 'train', 'id': 7, 'supercategory': 'vehicle'}, {'name': 'truck', 'id': 8, 'supercategory': 'vehicle'},
+                       {'name': 'boat', 'id': 9, 'supercategory': 'vehicle'}, {'name': 'traffic light', 'id': 10, 'supercategory': 'outdoor'},
+                       {'name': 'fire hydrant', 'id': 11, 'supercategory': 'outdoor'}, {'name': 'stop sign', 'id': 13, 'supercategory': 'outdoor'},
+                       {'name': 'parking meter', 'id': 14, 'supercategory': 'outdoor'}, {'name': 'bench', 'id': 15, 'supercategory': 'outdoor'},
+                       {'name': 'bird', 'id': 16, 'supercategory': 'animal'}, {'name': 'cat', 'id': 17, 'supercategory': 'animal'},
+                       {'name': 'dog', 'id': 18, 'supercategory': 'animal'}, {'name': 'horse', 'id': 19, 'supercategory': 'animal'},
+                       {'name': 'sheep', 'id': 20, 'supercategory': 'animal'}, {'name': 'cow', 'id': 21, 'supercategory': 'animal'},
+                       {'name': 'elephant', 'id': 22, 'supercategory': 'animal'}, {'name': 'bear', 'id': 23, 'supercategory': 'animal'},
+                       {'name': 'zebra', 'id': 24, 'supercategory': 'animal'}, {'name': 'giraffe', 'id': 25, 'supercategory': 'animal'},
+                       {'name': 'backpack', 'id': 27, 'supercategory': 'accessory'}, {'name': 'umbrella', 'id': 28, 'supercategory': 'accessory'},
+                       {'name': 'handbag', 'id': 31, 'supercategory': 'accessory'}, {'name': 'tie', 'id': 32, 'supercategory': 'accessory'},
+                       {'name': 'suitcase', 'id': 33, 'supercategory': 'accessory'}, {'name': 'frisbee', 'id': 34, 'supercategory': 'sports'},
+                       {'name': 'skis', 'id': 35, 'supercategory': 'sports'}, {'name': 'snowboard', 'id': 36, 'supercategory': 'sports'},
+                       {'name': 'sports ball', 'id': 37, 'supercategory': 'sports'}, {'name': 'kite', 'id': 38, 'supercategory': 'sports'},
+                       {'name': 'baseball bat', 'id': 39, 'supercategory': 'sports'}, {'name': 'baseball glove', 'id': 40, 'supercategory': 'sports'},
+                       {'name': 'skateboard', 'id': 41, 'supercategory': 'sports'}, {'name': 'surfboard', 'id': 42, 'supercategory': 'sports'},
+                       {'name': 'tennis racket', 'id': 43, 'supercategory': 'sports'}, {'name': 'bottle', 'id': 44, 'supercategory': 'kitchen'},
+                       {'name': 'wine glass', 'id': 46, 'supercategory': 'kitchen'}, {'name': 'cup', 'id': 47, 'supercategory': 'kitchen'},
+                       {'name': 'fork', 'id': 48, 'supercategory': 'kitchen'}, {'name': 'knife', 'id': 49, 'supercategory': 'kitchen'},
+                       {'name': 'spoon', 'id': 50, 'supercategory': 'kitchen'}, {'name': 'bowl', 'id': 51, 'supercategory': 'kitchen'},
+                       {'name': 'banana', 'id': 52, 'supercategory': 'food'}, {'name': 'apple', 'id': 53, 'supercategory': 'food'},
+                       {'name': 'sandwich', 'id': 54, 'supercategory': 'food'}, {'name': 'orange', 'id': 55, 'supercategory': 'food'},
+                       {'name': 'broccoli', 'id': 56, 'supercategory': 'food'}, {'name': 'carrot', 'id': 57, 'supercategory': 'food'},
+                       {'name': 'hot dog', 'id': 58, 'supercategory': 'food'}, {'name': 'pizza', 'id': 59, 'supercategory': 'food'},
+                       {'name': 'donut', 'id': 60, 'supercategory': 'food'}, {'name': 'cake', 'id': 61, 'supercategory': 'food'},
+                       {'name': 'chair', 'id': 62, 'supercategory': 'furniture'}, {'name': 'couch', 'id': 63, 'supercategory': 'furniture'},
+                       {'name': 'potted plant', 'id': 64, 'supercategory': 'furniture'}, {'name': 'bed', 'id': 65, 'supercategory': 'furniture'},
+                       {'name': 'dining table', 'id': 67, 'supercategory': 'furniture'}, {'name': 'toilet', 'id': 70, 'supercategory': 'furniture'},
+                       {'name': 'tv', 'id': 72, 'supercategory': 'electronic'}, {'name': 'laptop', 'id': 73, 'supercategory': 'electronic'},
+                       {'name': 'mouse', 'id': 74, 'supercategory': 'electronic'}, {'name': 'remote', 'id': 75, 'supercategory': 'electronic'},
+                       {'name': 'keyboard', 'id': 76, 'supercategory': 'electronic'}, {'name': 'cell phone', 'id': 77, 'supercategory': 'electronic'},
+                       {'name': 'microwave', 'id': 78, 'supercategory': 'appliance'}, {'name': 'oven', 'id': 79, 'supercategory': 'appliance'},
+                       {'name': 'toaster', 'id': 80, 'supercategory': 'appliance'}, {'name': 'sink', 'id': 81, 'supercategory': 'appliance'},
+                       {'name': 'refrigerator', 'id': 82, 'supercategory': 'appliance'}, {'name': 'book', 'id': 84, 'supercategory': 'indoor'},
+                       {'name': 'clock', 'id': 85, 'supercategory': 'indoor'}, {'name': 'vase', 'id': 86, 'supercategory': 'indoor'},
+                       {'name': 'scissors', 'id': 87, 'supercategory': 'indoor'}, {'name': 'teddy bear', 'id': 88, 'supercategory': 'indoor'},
+                       {'name': 'hair drier', 'id': 89, 'supercategory': 'indoor'}, {'name': 'toothbrush', 'id': 90, 'supercategory': 'indoor'}]
+        coco_ids = [cat['id'] for cat in categories]
+        coco_names = [cat['name'] for cat in categories]
+        ids = [0]+coco_ids
+        names = ['__background__'] + coco_names
 
-    def name2ind(self, name):
+        self.__id2int = dict(zip(ids, range(len(ids))))
+        self.__int2id = dict(zip(range(len(ids)), ids))
+        self.__name2int = dict(zip(names, range(len(names))))
+        self.__int2name = dict(zip(range(len(names)), names))
+
+    def id2int(self, id:int):
+        return self.__id2int[id]
+
+    def int2id(self, ind:int):
+        return self.__int2id[ind]
+
+    def name2int(self, name):
         return self.__name2int[name]
 
-    def ind2name(self, ind:int):
+    def int2name(self, ind:int):
         return self.__int2name[ind]
+
+    def id2name(self, id):
+        return self.int2name(self.id2int(id))
+
+    def name2id(self,name):
+        return self.int2id(self.name2int(name))
 
     def xywh2xyxy(self, bbox):
         assert isinstance(bbox, list)
@@ -126,7 +135,6 @@ class COCO(Dataset):
 
         self.coco = COCOtool(self.annFile)
         self.ids = list(sorted(self.coco.imgs.keys()))
-        self.categories = self.coco.dataset['categories']
 
     def __getitem__(self, index):
         """
@@ -145,7 +153,7 @@ class COCO(Dataset):
         clses = np.zeros(self.max_object)
         for i, (bbox,cls) in enumerate(zip(bboxesL,categoriesL)):
             bboxes[i] = np.array(bbox)
-            clses[i] = cls
+            clses[i] = self.aux.id2int(cls)
         img = self.transform(img)
         bboxes = torch.from_numpy(bboxes)
         clses = torch.from_numpy(clses)
@@ -186,11 +194,8 @@ class CoCo(object):
 
 import matplotlib.pyplot as plt
 from samhi.colors import RGB_COLORS
-# print(sys.path)
-# if 'python2.7' in sys.path:
-#     paths = [path for path in sys.path if 'python2.7' in path]
-#     print(paths)
 def img_writer(img, boxes, cls):
+    aux = COCOAux()
     dis_img = img.numpy().transpose(1,2,0)
     dis_img = (dis_img* [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406])*255
     dis_img = dis_img.astype(np.uint8)
@@ -199,6 +204,8 @@ def img_writer(img, boxes, cls):
     cls = cls.numpy().astype(np.uint8)
     for box, c in zip(boxes, cls):
         if c == 0:break
+        print(aux.int2name(c))
+        assert c == aux.id2int(aux.name2id(aux.int2name(c)))
         cv2.rectangle(dis_img, (box[0], box[1]), (box[2],box[3]),RGB_COLORS[c], 2)
 
     # cv2.imshow("img",dis_img)
