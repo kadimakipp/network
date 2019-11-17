@@ -19,7 +19,6 @@ import torch
 import cv2
 import os
 from torch.utils.data import Dataset
-from PIL import Image
 import torchvision.transforms as transforms
 from pycocotools.coco import COCO as COCOtool
 """
@@ -95,9 +94,43 @@ class COCOAux(object):
     def name2id(self,name):
         return self.int2id(self.name2int(name))
 
-    def xywh2xyxy(self, bbox):
+    @staticmethod
+    def xywh2xyxy(bbox):
         assert isinstance(bbox, list)
         return [bbox[0], bbox[1], bbox[0]+bbox[2],bbox[1]+bbox[3]]
+
+    @staticmethod
+    def xywh2cxywh(bbox):
+        if isinstance(bbox, list):#1D
+            bb = [float(b) for b in bbox]
+            bbox = [bb[0]+bb[2]/2, bb[1]+bb[3]/2, bb[2],bb[3]]
+        elif isinstance(bbox, np.ndarray):#2D
+            bbox = bbox.astype(np.float)
+            if len(bbox.shape)==1:
+                bbox[0] = bbox[0] + bbox[2] / 2
+                bbox[1] = bbox[1] + bbox[3] / 2
+            elif len(bbox.shape)==2:
+                bbox[:,0] = bbox[:, 0] + bbox[:,2]/2
+                bbox[:,1] = bbox[:, 1] + bbox[:,3]/2
+        else:
+            raise Exception("xywh to cxcywh error")
+        return bbox
+
+    @staticmethod
+    def cxywh2xywh(bbox):
+        if isinstance(bbox, list): #1D
+            bbox = [bbox[0]-bbox[2]/2, bbox[1]-bbox[3]/2, bbox[2], bbox[3]]
+        elif isinstance(bbox, np.ndarray):#2D
+            if len(bbox.shape) == 1:
+                bbox[0] = bbox[0] - bbox[2] / 2
+                bbox[1] = bbox[1] - bbox[3] / 2
+            elif len(bbox.shape) == 2:
+                bbox[:, 0] = bbox[:, 0] - bbox[:, 2] / 2
+                bbox[:, 1] = bbox[:, 1] - bbox[:, 3] / 2
+        else:
+            raise Exception("cxcywh to xywh error")
+        return bbox
+
 
     def parse_coco_ann(self, objects):
         """box: x y w h"""
@@ -109,9 +142,10 @@ class COCOAux(object):
         for o in objects:
             #iscrowds.append(o['iscrowd'])
             #names.append(o['image_id'])
-            categories.append(o['category_id'])
-            bboxes.append(self.xywh2xyxy(o['bbox']))
-
+            categories.append(self.id2int(o['category_id']))
+            bboxes.append(self.xywh2cxywh(o['bbox']))
+        categories = np.array(categories)
+        bboxes = np.array(bboxes)
         return categories,bboxes
 
     @classmethod
@@ -128,9 +162,7 @@ class COCO(Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.annFile = os.path.join(self.root, 'annotations2014/instances_minival2014.json')
-
         self.aux = COCOAux()
-        self.max_object = 64
         self.img_dir = os.path.join(self.root, COCOAux.image_dir('val',years))
 
         self.coco = COCOtool(self.annFile)
@@ -147,38 +179,49 @@ class COCO(Dataset):
         target = coco.loadAnns(ann_ids)
 
         file_name = coco.loadImgs(img_id)[0]['file_name']
-        img = Image.open(os.path.join(self.img_dir, file_name)).convert('RGB')
-        categoriesL,bboxesL = self.aux.parse_coco_ann(target)
-        bboxes = np.zeros((self.max_object,4))
-        clses = np.zeros(self.max_object)
-        for i, (bbox,cls) in enumerate(zip(bboxesL,categoriesL)):
-            bboxes[i] = np.array(bbox)
-            clses[i] = self.aux.id2int(cls)
-        img = self.transform(img)
-        bboxes = torch.from_numpy(bboxes)
-        clses = torch.from_numpy(clses)
+        # img = Image.open(os.path.join(self.img_dir, file_name)).convert('RGB')
+        img_path = os.path.join(self.img_dir, file_name)
+        img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        if img is None:
+            raise Exception("check image {}".format(img_path))
+        o_h, o_w = img.shape[:2]
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        categories,bboxes = self.aux.parse_coco_ann(target)
+        if len(bboxes.shape) == 1:
+            raise Exception("check boxes id {}, {}".format(index ,img_path))
+        sample={'image':img,
+                'bboxes':bboxes,
+                'categories':categories,
+                'path':img_path,
+                'o_hw':(o_h,o_w)
+                }
+        sample = self.transform(sample)
 
-        return img, bboxes, clses
+        return sample
 
     def __len__(self):
         return len(self.ids)
 
 
+from dataset import selfT
+
 
 class CoCo(object):
-    def __init__(self):
+    def __init__(self, max_object=64):
         self.root = '/media/kipp/data/DATASET/COCO'
         self.num_work = 4
         self.shuffle = True
+        self.max_object = max_object
 
     def Transform(self, img_size):
         transform = [
             # transforms.RandomCrop(224),
             # transforms.RandomHorizontalFlip(0.5),
             # transforms.RandomAffine(5),
-            # transforms.Resize((img_size, img_size), Image.BICUBIC),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            selfT.KeepAspect(),
+            selfT.Resize(img_size),
+            selfT.ToTensor(self.max_object),
+            selfT.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
         return transforms.Compose(transform)
 
@@ -196,32 +239,36 @@ import matplotlib.pyplot as plt
 from samhi.colors import RGB_COLORS
 def img_writer(img, boxes, cls):
     aux = COCOAux()
-    dis_img = img.numpy().transpose(1,2,0)
-    dis_img = (dis_img* [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406])*255
-    dis_img = dis_img.astype(np.uint8)
-    dis_img = cv2.cvtColor(dis_img, cv2.COLOR_RGB2BGR)
-    boxes = boxes.int().numpy()
+    dis_img = img.numpy().transpose(1, 2, 0)
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    dis_img = (dis_img*std+mean)*255
+
+    dis_img = dis_img.astype(np.uint8).copy()
+    h,w= dis_img.shape[0:2]
+    boxes = boxes.numpy()
     cls = cls.numpy().astype(np.uint8)
     for box, c in zip(boxes, cls):
         if c == 0:break
         print(aux.int2name(c))
         assert c == aux.id2int(aux.name2id(aux.int2name(c)))
-        cv2.rectangle(dis_img, (box[0], box[1]), (box[2],box[3]),RGB_COLORS[c], 2)
-
-    # cv2.imshow("img",dis_img)
-    # cv2.waitKey(0)
-    return cv2.cvtColor(dis_img, cv2.COLOR_BGR2RGB)
+        box = aux.cxywh2xywh(box)
+        cv2.rectangle(dis_img, (int(box[0]*w), int(box[1]*h)),
+                      (int((box[0]+box[2])*w),int((box[1]+box[3])*h)),RGB_COLORS[c], 1)
+    return dis_img
 
 def main():
     coco = CoCo()
-    loader = coco.get_loader(1,224, 'train')
+    loader = coco.get_loader(2,416, 'train')
     print(len(loader))
-    for i, (images, boxes, cls) in enumerate(loader):
+    for i, samples in enumerate(loader):
+        images = samples['image']
+        boxes = samples['bboxes']
+        cls = samples['categories']
         print(images.shape, boxes.shape, cls.shape)
         dis_img = img_writer(images[0], boxes[0], cls[0])
         plt.imshow(dis_img)
         plt.show()
-        break
 
 if __name__ == "__main__":
     import fire
