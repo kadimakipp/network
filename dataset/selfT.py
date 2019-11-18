@@ -124,6 +124,32 @@ class Normalize(object):
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
+class YoloTarget(object):
+    """
+    build yolo network target
+    classes is one hot encode
+
+    output: [mask,noobj_mask,tx,ty,tw,th,confidence, classes'],
+            shape(7+classes, anchors, h, w)
+    """
+    def __init__(self,classes, anchors,size):
+        self.size = size  # tuple(w,h)
+        if not isinstance(self.size, tuple):
+            self.size = (self.size, self.size)
+        self.h,self.w = self.size
+
+        self.n_classes = classes
+        self.anchors = anchors
+
+    def __call__(self, sample):
+        boxes = sample['bboxes']#cxywh Non=0
+        cls = sample['categories']
+        #TODO: Use numpy transform target and change ToTensor function
+        #https://github.com/BobLiu20/YOLOv3_PyTorch/blob/master/nets/yolo_loss.py
+        sample['target'] = None
+        return sample
+
+
 def main():
     pass
 

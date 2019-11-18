@@ -21,6 +21,7 @@ import os
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 from pycocotools.coco import COCO as COCOtool
+from samhi.detected import DetectedAux as DA
 """
 https://github.com/BobLiu20/YOLOv3_PyTorch/blob/master/common/coco_dataset.py
 """
@@ -94,43 +95,6 @@ class COCOAux(object):
     def name2id(self,name):
         return self.int2id(self.name2int(name))
 
-    @staticmethod
-    def xywh2xyxy(bbox):
-        assert isinstance(bbox, list)
-        return [bbox[0], bbox[1], bbox[0]+bbox[2],bbox[1]+bbox[3]]
-
-    @staticmethod
-    def xywh2cxywh(bbox):
-        if isinstance(bbox, list):#1D
-            bb = [float(b) for b in bbox]
-            bbox = [bb[0]+bb[2]/2, bb[1]+bb[3]/2, bb[2],bb[3]]
-        elif isinstance(bbox, np.ndarray):#2D
-            bbox = bbox.astype(np.float)
-            if len(bbox.shape)==1:
-                bbox[0] = bbox[0] + bbox[2] / 2
-                bbox[1] = bbox[1] + bbox[3] / 2
-            elif len(bbox.shape)==2:
-                bbox[:,0] = bbox[:, 0] + bbox[:,2]/2
-                bbox[:,1] = bbox[:, 1] + bbox[:,3]/2
-        else:
-            raise Exception("xywh to cxcywh error")
-        return bbox
-
-    @staticmethod
-    def cxywh2xywh(bbox):
-        if isinstance(bbox, list): #1D
-            bbox = [bbox[0]-bbox[2]/2, bbox[1]-bbox[3]/2, bbox[2], bbox[3]]
-        elif isinstance(bbox, np.ndarray):#2D
-            if len(bbox.shape) == 1:
-                bbox[0] = bbox[0] - bbox[2] / 2
-                bbox[1] = bbox[1] - bbox[3] / 2
-            elif len(bbox.shape) == 2:
-                bbox[:, 0] = bbox[:, 0] - bbox[:, 2] / 2
-                bbox[:, 1] = bbox[:, 1] - bbox[:, 3] / 2
-        else:
-            raise Exception("cxcywh to xywh error")
-        return bbox
-
 
     def parse_coco_ann(self, objects):
         """box: x y w h"""
@@ -143,7 +107,7 @@ class COCOAux(object):
             #iscrowds.append(o['iscrowd'])
             #names.append(o['image_id'])
             categories.append(self.id2int(o['category_id']))
-            bboxes.append(self.xywh2cxywh(o['bbox']))
+            bboxes.append(DA.xywh2cxywh(o['bbox']))
         categories = np.array(categories)
         bboxes = np.array(bboxes)
         return categories,bboxes
@@ -252,7 +216,7 @@ def img_writer(img, boxes, cls):
         if c == 0:break
         print(aux.int2name(c))
         assert c == aux.id2int(aux.name2id(aux.int2name(c)))
-        box = aux.cxywh2xywh(box)
+        box = DA.cxywh2xywh(box)
         cv2.rectangle(dis_img, (int(box[0]*w), int(box[1]*h)),
                       (int((box[0]+box[2])*w),int((box[1]+box[3])*h)),RGB_COLORS[c], 1)
     return dis_img
