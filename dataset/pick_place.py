@@ -29,8 +29,6 @@ pick and place dataset only suction way
 DEP_MEAN = 0.4313711812112666
 DEP_STD = 0.06876936556987262
 class Suction(Dataset):
-
-
     def __init__(self, root, transform, train='train', use_im=False):
         super(Suction, self).__init__()
         self.root = root
@@ -76,24 +74,30 @@ class Suction(Dataset):
         depth_path = os.path.join(self.__depth, id+'.png')
         depth_back_path = os.path.join(self.__depth_back, id+'.png')
         depth = Image.open(depth_path)
-        depth_back = Image.open(depth_back_path)
         depth = np.array(depth).astype(np.float)/1e+4
-        depth_back = np.array(depth_back).astype(np.float)/1e+4
-        # depth = (depth-DEP_MEAN)/DEP_STD
-        depth = depth - depth_back
-        depth = torch.from_numpy(depth).unsqueeze(0)
+        mask = (depth>0)&(depth<0.9)
+        mask = mask.astype(np.float)
+        mask[mask==0.0] = -1.0
+        mask = torch.from_numpy(mask).unsqueeze(0)
+        #depth_back = Image.open(depth_back_path)
+        #depth_back = np.array(depth_back).astype(np.float)/1e+4
 
+        depth = (depth-DEP_MEAN)/DEP_STD
+        # depth = depth - depth_back
+
+        depth = torch.from_numpy(depth).unsqueeze(0)
+        cat = torch.cat((depth, mask))
+        sample = {'depth': depth, 'label': label}
+        sample['mask'] = mask
+        sample['cat'] = cat
 
 
         if self.use_im:
             im_path = os.path.join(self.__color, id+'.png')
             im = Image.open(im_path)
             im = self.transform(im)
-            return im, depth, label
-
-        return depth, label
-
-
+            sample['image'] = im
+        return sample
 
 class Pick(object):
     def __init__(self):
@@ -103,10 +107,6 @@ class Pick(object):
 
     def Transform(self, img_size):
         transform = TransForms.Compose([
-            # transforms.RandomCrop(224),
-            # transforms.RandomHorizontalFlip(0.5),
-            # transforms.RandomAffine(5),
-            #TransForms.Resize((img_size, img_size), Image.BICUBIC),
             TransForms.ToTensor(),
             TransForms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
@@ -129,9 +129,10 @@ import matplotlib.pyplot as plt
 def check_loader():
     plt.figure()
     pick = Pick()
-    loader = pick.get_loader(1, 448, mode='test')
+    loader = pick.get_loader(1, 448, mode='train')
     print(len(loader))
-    for i, (images, depths, labels) in enumerate(loader):
+    for i, samples in enumerate(loader):
+        images, depths, labels = samples['image'], samples['depth'], samples['label']
         print(images.shape, depths.shape, labels.shape)
         dis_img = images[0].numpy().transpose(1, 2, 0)
         dis_img = dis_img * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]
@@ -141,9 +142,15 @@ def check_loader():
         dis_lab = labels[0].numpy() * 127
         plt.imshow(dis_lab.astype(np.uint8))
         plt.show()
-        dis_dep = depths[0].numpy().squeeze()#*DEP_STD+DEP_MEAN
+        dis_dep = depths[0].numpy().squeeze()#DEP_STD+DEP_MEAN
         plt.imshow(dis_dep)
         plt.show()
+        mask = samples['mask']
+        dis_mask = mask[0].numpy().squeeze()
+        plt.imshow(dis_mask)
+        plt.show()
+        cat = samples['cat']
+        print(cat.shape)
         break
 
 def compute_depth_mean_std(root):
@@ -167,8 +174,7 @@ def compute_depth_mean_std(root):
         print("DEP_MEAN = {} \nDEP_STD = {}".format(mean, std))
 
 
-
-def main(code = "comput"):
+def main(code = "train"):
     if code in ['compute']:
         root = '/media/kipp/work/Datas/Pick-and-Place/suction_data'
         compute_depth_mean_std(root)
