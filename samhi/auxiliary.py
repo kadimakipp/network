@@ -24,37 +24,37 @@ class AuxFunction(object):
     def __init__(self):
         pass
 
-    @staticmethod
-    def device():
+    @classmethod
+    def device(cls):
         return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    @staticmethod
-    def to_categorical(y, num_columns):
+    @classmethod
+    def to_categorical(cls,y, num_columns):
         """Return one-hot encoded device variable"""
         y_cat = torch.zeros((y.shape[0]), num_columns)
         y_cat[range(y.shape[0]), y] = 1.0
 
         return y_cat.to(device=AuxFunction.device())
 
-    @staticmethod
-    def update_lr(optimizer, lr):
+    @classmethod
+    def update_lr(cls,optimizer, lr):
         for params in optimizer.param_groups:
             params['lr'] = lr
 
-    @staticmethod
-    def get_lr(optimizer):
+    @classmethod
+    def get_lr(cls,optimizer):
         lr = 0
         for params in optimizer.param_groups:
             lr = params['lr']
         return lr
 
-    @staticmethod
-    def parameters_total(model):
+    @classmethod
+    def parameters_total(cls,model):
         total = sum(param.numel() for param in model.parameters())
         return total / 1e6
 
-    @staticmethod
-    def WarmRestart(optim, lr=1, T_max=10, mult=2,eta_min=0.00001,factor=0.65):
+    @classmethod
+    def WarmRestart(cls,optim, lr=1, T_max=10, mult=2,eta_min=0.00001,factor=0.65):
         """ T_max: 周期， mutl 周期的比值, eta_min 最小lr, factor, 幅度缩小比例
             paper: https://arxiv.org/pdf/1608.03983.pdf
         """
@@ -79,8 +79,8 @@ class AuxFunction(object):
                 return n_t
         return torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=warmRestart)
 
-    @staticmethod
-    def CosineAnnealing(optim, lr=1, T_max=30,eta_min=0.0001,factor=0.65, restart=False):
+    @classmethod
+    def CosineAnnealing(cls, optim, lr=1, T_max=30,eta_min=0.0001,factor=0.65, restart=False):
         """ factor version
         T_max: 周期， mutl 周期的比值, eta_min 最小lr, factor, 幅度缩小比例
         """
@@ -99,8 +99,8 @@ class AuxFunction(object):
 
         return torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=cosineAnnealing)
 
-    @staticmethod
-    def log_name(dir_name,net_name,comment=''):
+    @classmethod
+    def dir_name(cls, dir_name,net_name,comment=''):
         name = os.path.join(dir_name, net_name)
         import socket
         from datetime import datetime
@@ -109,66 +109,32 @@ class AuxFunction(object):
             name, current_time + '_' + socket.gethostname() + comment)
         return logdir
 
-    @staticmethod
-    def project_path():
+    @classmethod
+    def project_path(cls):
         return os.path.dirname(os.path.dirname(__file__))
 
+    @classmethod
+    def make_dirs(cls, dir):
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
-import matplotlib.pyplot as plt
-import pandas as pd
+    @classmethod
+    def dir_gourd2boy(cls, dir):
+        return dir.replace('gourd','boy')
+    @classmethod
+    def dir_boy2gourd(cls,dir):
+        return dir.replace('boy','gourd')
 
-class FireInfo(object):
-    def __init__(self):
-        root = os.path.dirname(__file__)
-        self.fire = os.path.join(root, "fire")
-        plt.figure()
-        self.loss= list([0])
-        self.acc = list([0])
-        self.lr = list([0])
-
-    def update(self, loss, acc,lr):
-        self.loss.append(loss)
-        self.acc.append(acc)
-        self.lr.append(lr)
-
-    def clear(self):
-        self.loss = list([0])
-        self.acc = list([0])
-        self.lr = list([0])
-    def save(self):
-        data = {'loss': self.loss, 'acc': self.acc, 'lr':self.lr}
-        csv = pd.DataFrame(data)
-        csv.to_csv(os.path.join(self.fire, 'fire.csv'))
-
-    def read(self):
-        self.clear()
-        data = pd.read_csv(os.path.join(self.fire, 'fire.csv'))
-        loss = data['loss']
-        self.loss.extend(loss.to_list())
-        acc = data['acc']
-        self.acc.extend(acc.to_list())
-        lr = data['lr']
-        self.lr.extend(lr.to_list())
-
-    def display(self):
-        ax1 = plt.subplot(3,1,1)
-        ax1.set_title("Loss")
-        plt.plot(np.arange(len(self.loss)), self.loss,color='r')
-        ax2 = plt.subplot(3, 1, 2, sharex=ax1)
-        ax2.set_title("Acc")
-        plt.plot(np.arange(len(self.acc)), self.acc,color='r')
-        ax3 = plt.subplot(3, 1, 3, sharex=ax1)
-        ax3.set_title("LR")
-        plt.plot(np.arange(len(self.lr)), self.lr,color='r')
-        #plt.draw()
-        plt.show()
 
 
 if __name__ == "__main__":
-    fire = FireInfo()
-    for i in np.arange(1,100):
-        fire.update(i,i,i)
-    fire.save()
-    fire.read()
-    fire.display()
+    aux = AuxFunction()
+    pro_dir = aux.project_path()
+    boy_dir = aux.dir_name(os.path.join(pro_dir, 'boy'),'my_net')
+    gourd_dir = aux.dir_boy2gourd(boy_dir)
+    print(boy_dir, gourd_dir)
+    aux.make_dirs(gourd_dir)
+    aux.make_dirs(boy_dir)
+
+
 

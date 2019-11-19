@@ -12,7 +12,7 @@ Strong men believe in cause and effect.
 """
 import torch
 import unittest
-from model_tools_lib.flops import count_ops
+from samhi.flops import count_ops
 from torchvision.models import resnet18
 
 
