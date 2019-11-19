@@ -80,14 +80,14 @@ class DetectedAux(object):
         y1 = Fmax(ay1,by1)
         x2 = Fmin(ax2,bx2)
         y2 = Fmin(ay2,by2)
-        inter_w = x2-x1+1
-        inter_h = y2-y1+1
+        inter_w = x2-x1
+        inter_h = y2-y1
         inter_w[inter_w<0] = 0
         inter_h[inter_h<0] = 0
         inter_rect_area = inter_w*inter_h
 
-        a_area = (ax2-ax1+1)*(ay2-ay1+1)
-        b_area = (bx2-bx1+1)*(by2-by1+1)
+        a_area = (ax2-ax1)*(ay2-ay1)
+        b_area = (bx2-bx1)*(by2-by1)
         #inter/union
         iou = inter_rect_area/(a_area+b_area-inter_rect_area+1e-16)
         return iou
@@ -120,7 +120,7 @@ def test_iou():
     a_boxs = a_box.repeat(b_box.shape[0], axis=0)
     print(a_boxs)
 
-    b_boxs = np.tile(b_box, (b_box.shape[0], 1))
+    b_boxs = np.tile(b_box, (a_box.shape[0], 1))
     print(b_boxs)
     iou = aux.iou(a_boxs, b_boxs)
     print(iou)
