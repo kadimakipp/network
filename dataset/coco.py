@@ -118,16 +118,22 @@ class COCOAux(object):
         assert years in ['2014', '2017']
         return mode+years
 
-#TODO: train and val 2014 2017
+    @classmethod
+    def annotation_path(cls, years,prefix):
+        assert years in ['2014', '2017']
+        assert prefix in ['train','val', 'test', 'minval']
+
+        return "annotations{}/instances_{}{}.json".format(years,prefix,years)
+
 class COCO(Dataset):
-    def __init__(self, root, transform, target_transform,train='train', years='2014'):
+    def __init__(self, root, transform, target_transform, train, years):
         super(COCO, self).__init__()
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
-        self.annFile = os.path.join(self.root, 'annotations2014/instances_minival2014.json')
+        self.annFile = os.path.join(self.root, COCOAux.annotation_path(years,train))
         self.aux = COCOAux()
-        self.img_dir = os.path.join(self.root, COCOAux.image_dir('val',years))
+        self.img_dir = os.path.join(self.root, COCOAux.image_dir(train,years))
 
         self.coco = COCOtool(self.annFile)
         self.ids = list(sorted(self.coco.imgs.keys()))
@@ -152,7 +158,8 @@ class COCO(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         categories,bboxes = self.aux.parse_coco_ann(target)
         if len(bboxes.shape) == 1:
-            raise Exception("check boxes id {}, {}".format(index ,img_path))
+            #should be in image is have no obj...
+            raise Exception("check bboxes shape {} in image id {}, {}".format(bboxes.shape,index ,img_path))
         sample={'image':img,
                 'bboxes':bboxes,
                 'categories':categories,
@@ -172,7 +179,8 @@ from dataset import selfT
 
 class CoCo(object):
     def __init__(self, max_object=64):
-        self.root = '/media/kipp/data/DATASET/COCO'
+        # self.root = '/media/kipp/data/DATASET/COCO'
+        self.root = '/media/kipp/work/DATASET/COCO'
         self.num_work = 4
         self.shuffle = True
         self.max_object = max_object
@@ -190,10 +198,10 @@ class CoCo(object):
         return transforms.Compose(transform)
 
 
-    def get_loader(self, batch_size, img_size, mode='train'):
+    def get_loader(self, batch_size, img_size, mode='val',years='2017'):
         transform= self.Transform(img_size)
         return torch.utils.data.DataLoader(
-            COCO(self.root, transform=transform,target_transform=transform,train=mode),
+            COCO(self.root, transform=transform,target_transform=transform,train=mode, years=years),
             batch_size=batch_size,
             shuffle=self.shuffle,
             num_workers=self.num_work
@@ -214,17 +222,20 @@ def img_writer(img, boxes, cls):
     cls = cls.numpy().astype(np.uint8)
     for box, c in zip(boxes, cls):
         if c == 0:break
-        print(aux.int2name(c))
+        name = aux.int2name(c)
         assert c == aux.id2int(aux.name2id(aux.int2name(c)))
         box = DA.cxywh2xywh(box)
         cv2.rectangle(dis_img, (int(box[0]*w), int(box[1]*h)),
                       (int((box[0]+box[2])*w),int((box[1]+box[3])*h)),RGB_COLORS[c], 1)
+        cv2.putText(dis_img, name, (int(box[0] * w), int(box[1] * h)), cv2.FONT_HERSHEY_SIMPLEX,
+                    1, RGB_COLORS[c], 2, cv2.LINE_AA)
     return dis_img
 
 def main():
     coco = CoCo()
-    loader = coco.get_loader(2,416, 'train')
+    loader = coco.get_loader(2,416)
     print(len(loader))
+
     for i, samples in enumerate(loader):
         images = samples['image']
         boxes = samples['bboxes']
@@ -233,6 +244,7 @@ def main():
         dis_img = img_writer(images[0], boxes[0], cls[0])
         plt.imshow(dis_img)
         plt.show()
+        break
 
 if __name__ == "__main__":
     import fire

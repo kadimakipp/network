@@ -144,7 +144,7 @@ class YoloTarget(object):
             mask = positive sample
             no obj mask = Negative sample
     """
-    def __init__(self,classes, anchors, size, ignore_threshold):
+    def __init__(self,classes, anchors, size,feature_size,ignore_threshold=0.5):
         self.size = size  # tuple(w,h)
         if not isinstance(self.size, tuple):
             self.size = (self.size, self.size)
@@ -154,13 +154,13 @@ class YoloTarget(object):
         self.anchors = anchors
         self.n_anchors = self.anchors.shape[0]
         self.ignore_threshold = ignore_threshold
+        #TODO: param 统一管理
+        self.feature_size = feature_size
 
     def __call__(self, sample):
         #TODO:Quesion : grid is feature or image; --image
         #anchor box原本设定是相对于416*416坐标系下的坐标，在yolov3.cfg文件中写明了
         # ，代码中是把cfg中读取的坐标除以stride如32映射到feature map坐标系中
-
-
         boxes = sample['bboxes']  # cxywh Non=0
         cls = sample['categories']
         cx=boxes[:,0]
@@ -172,41 +172,68 @@ class YoloTarget(object):
         Nboxes= boxes.shape[0]
         left_w = w[:, np.newaxis]
         left_h = h[:, np.newaxis]
-        left_boxes = np.concatenate((np.zeros((Nboxes,2)),left_w,left_h), axis=1)
-        anchor_boxes = np.concatenate((np.zeros(self.n_anchors,2), self.anchors), axis=1)
+        left_boxes = np.concatenate((np.zeros((Nboxes,2)),left_w*self.w,left_h*self.h), axis=1)
+        anchor_boxes = np.concatenate((np.zeros((self.n_anchors,2)), self.anchors), axis=1)
 
         left_boxes = left_boxes.repeat(self.n_anchors,axis=0)
         anchor_boxes=np.tile(anchor_boxes,(Nboxes,1))
         anchor_iou = aux.iou(left_boxes,anchor_boxes)
-        anchor_level_n = int(np.sqrt(self.n_anchors))
-        anchor_iou = anchor_iou.reshape(-1, anchor_level_n, anchor_level_n)#(Nboxes,3,3)
-
+        anchor_iou = anchor_iou.reshape(-1, self.n_anchors)#(Nboxes,9)
+        ###################three Scale 52,26,13
+        #---------------------------------------------------------------
         #no obj
-        anchor_mask = anchor_iou>self.ignore_threshold
-        #mask map to no_obj
+        anchor_no_obj_mask = anchor_iou>self.ignore_threshold #(Nboxes,9)
+        anchor_no_obj_mask_l = np.split(anchor_no_obj_mask,3,axis=1)#list[((Nboxes,3),(Nboxes,3),(Nboxes,3))]
         #obj
-        anchor_mask = np.argmax(anchor_iou,axis=2)
+        anchor_level_n = int(np.sqrt(self.n_anchors))#3
+        anchor_iou_reshape = anchor_iou.reshape(-1, anchor_level_n, anchor_level_n)
+        anchor_obj_mask = np.argmax(anchor_iou_reshape,axis=2)#(Nboxes,3)
+        anchor_obj_mask_l = np.split(anchor_obj_mask, 3, axis=1)#list[(Nboxes,1),(Nboxes,1),(Nboxes,1)]
         #-----------------------------------------------------
-        # a = x*feature   预测时与之对应即可。
+        anchor_l = np.split(self.anchors,3, axis=0)#list[(3,2),(3,2),(3,2)]
+        for i, (f_s, no_obj, obj, anc) in enumerate(zip(self.feature_size,
+                                                      anchor_no_obj_mask_l,
+                                                      anchor_obj_mask_l,
+                                                      anchor_l)):
+            #no_obj(Nboxes,3), obj(Nboxes) anc(3,2)
+            #----------------------fill in no obj mask
+            feature_shape = (anchor_level_n, f_s, f_s)
+            grid_x = (cx*f_s).astype(np.int32)#  # (Nboxes, )
+            grid_y = (cy*f_s).astype(np.int32) #  # (Nboxes, )
+            no_obj_mask = np.ones(feature_shape)# iou>0.5, no_obj=1, obj=0
+            #flatten anchor no object mask
+            n_id_boxes, n_id_anchor = np.where(no_obj==True)
+            no_obj_mask[n_id_anchor, grid_y[n_id_boxes], grid_x[n_id_boxes]]=0
 
-        #3个尺度相互呼应。
-        # init
-        shape = (anchor_level_n,anchor_level_n, self.h, self.w)
-        obj = np.zeros(shape)
-        no_obj = np.ones(shape)
-        tx = np.zeros(shape, dtype=np.float32)  #
-        ty = np.zeros(shape, dtype=np.float32)  # 需要分尺度处理。
-        tw = np.zeros(shape, dtype=np.float32)
-        th = np.zeros(shape, dtype=np.float32)
-        confidence = np.zeros(shape)
-        categories = np.zeros(shape + (self.n_classes,))
+            #----------------------fill in obj mask and data
+            obj = obj.squeeze() #anchor index
+            #grid_x ,grid_y location index
+            obj_mask = np.zeros(feature_shape)#obj=1 have object
+            obj_mask[obj, grid_y, grid_x] = 1
 
+            tx = np.zeros(feature_shape)
+            tx[obj,grid_y,grid_x] = cx*f_s-grid_x
+            ty = np.zeros(feature_shape)
+            ty[obj,grid_y,grid_x] = cy*f_s-grid_y
 
+            box_anchor = anc[obj]
+            tw = np.zeros(feature_shape)
+            tw[obj,grid_y,grid_x]=np.log(w*self.w/box_anchor[:,0])
+            th = np.zeros(feature_shape)
+            th[obj,grid_y,grid_x] = np.log(h*self.h/box_anchor[:,1])
+            confidence = np.zeros(feature_shape)
+            confidence[obj,grid_y,grid_x]=1
+            categories = np.zeros((anchor_level_n,self.n_classes, f_s, f_s))
+            categories[obj,cls, grid_y,grid_x] =1
+            cat_l = np.split(categories,anchor_level_n, axis=0)
+            cat_l = [c.squeeze() for c in cat_l]
+            categories = np.concatenate(cat_l,axis=0)
+            target = np.concatenate((tx,ty,tw,th,confidence,categories),axis=0)
 
-
-
-        sample['target'] = None
-
+            key_str = 'scale_{}_'.format(f_s)
+            sample[key_str+'obj']=obj_mask
+            sample[key_str+'no_obj'] = no_obj_mask
+            sample[key_str+'target'] = target
         return sample
 
 

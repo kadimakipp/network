@@ -18,17 +18,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+
 class DetectedAux(object):
     def __init__(self):
         pass
 
-    @staticmethod
-    def xywh2xyxy(bbox):
+    @classmethod
+    def xywh2xyxy(cls,bbox):
         assert isinstance(bbox, list)
         return [bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]
 
-    @staticmethod
-    def xywh2cxywh(bbox):
+    @classmethod
+    def xywh2cxywh(cls,bbox):
         if isinstance(bbox, list):  # 1D
             bb = [float(b) for b in bbox]
             bbox = [bb[0] + bb[2] / 2, bb[1] + bb[3] / 2, bb[2], bb[3]]
@@ -44,8 +45,8 @@ class DetectedAux(object):
             raise Exception("xywh to cxcywh error")
         return bbox
 
-    @staticmethod
-    def cxywh2xywh(bbox):
+    @classmethod
+    def cxywh2xywh(cls,bbox):
         if isinstance(bbox, list):  # 1D
             bbox = [bbox[0] - bbox[2] / 2, bbox[1] - bbox[3] / 2, bbox[2], bbox[3]]
         elif isinstance(bbox, np.ndarray):  # 2D
@@ -59,8 +60,8 @@ class DetectedAux(object):
             raise Exception("cxcywh to xywh error")
         return bbox
 
-    @staticmethod
-    def iou(a_box, b_box):
+    @classmethod
+    def iou(cls,a_box, b_box):
         """
         must be same shape,one to one,you can repeat a_box,b_box
         :param a_box:x y x y ,shape(N,4)
@@ -91,6 +92,7 @@ class DetectedAux(object):
         #inter/union
         iou = inter_rect_area/(a_area+b_area-inter_rect_area+1e-16)
         return iou
+
 
 def test_iou():
     print("-------------one to one------------")

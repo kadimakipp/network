@@ -41,7 +41,7 @@ class ConvThree(nn.Sequential):
 class ConvPred(nn.Module):
     def __init__(self, inc, ouc, out_size):
         super(ConvPred, self).__init__()
-        
+
 
 
 
