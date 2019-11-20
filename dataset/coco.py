@@ -138,6 +138,10 @@ class COCO(Dataset):
         self.coco = COCOtool(self.annFile)
         self.ids = list(sorted(self.coco.imgs.keys()))
 
+
+    def __len__(self):
+        return len(self.ids)
+
     def __getitem__(self, index):
         """
         :param index:
@@ -164,14 +168,14 @@ class COCO(Dataset):
                 'bboxes':bboxes,
                 'categories':categories,
                 'path':img_path,
-                'o_hw':(o_h,o_w)
+                'o_hw':(o_h,o_w),
+                'index':index
                 }
         sample = self.transform(sample)
 
         return sample
 
-    def __len__(self):
-        return len(self.ids)
+
 
 
 from dataset import selfT
@@ -180,10 +184,15 @@ from dataset import selfT
 class CoCo(object):
     def __init__(self, max_object=64):
         # self.root = '/media/kipp/data/DATASET/COCO'
-        self.root = '/media/kipp/work/DATASET/COCO'
-        self.num_work = 4
+        self.root = '/media/kipp/data/DATASET/COCO'
+        self.num_work = 1
         self.shuffle = True
         self.max_object = max_object
+        self.anchors = np.array([[373, 326], [156, 198], [116, 90],
+                                 [59, 119], [62, 45], [30, 61],
+                                 [33, 23], [16, 30], [10, 13]])
+        self.feature_size = np.array([52, 26, 13])
+        self.n_classes = 81
 
     def Transform(self, img_size):
         transform = [
@@ -192,7 +201,9 @@ class CoCo(object):
             # transforms.RandomAffine(5),
             selfT.KeepAspect(),
             selfT.Resize(img_size),
-            selfT.ToTensor(self.max_object),
+            selfT.YoloTarget(self.n_classes, self.anchors, img_size, self.feature_size),
+            #must be YoloTarget after
+            selfT.ToTensor(self.max_object, self.feature_size),
             selfT.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
         return transforms.Compose(transform)
@@ -240,11 +251,16 @@ def main():
         images = samples['image']
         boxes = samples['bboxes']
         cls = samples['categories']
+        print(samples['path'],samples['index'])
+        for f_s in [52,26,13]:
+            key_str = 'scale_{}_'.format(f_s)
+            for k in ['no_obj', 'obj','target']:
+                print(samples[key_str+k].shape)
         print(images.shape, boxes.shape, cls.shape)
         dis_img = img_writer(images[0], boxes[0], cls[0])
         plt.imshow(dis_img)
         plt.show()
-        break
+        # break
 
 if __name__ == "__main__":
     import fire

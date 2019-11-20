@@ -71,8 +71,9 @@ class Resize(object):
         return sample
 
 class ToTensor(object):
-    def __init__(self, max_object):
+    def __init__(self, max_object, feature_size):
         self.max_object = max_object
+        self.feature_size = feature_size
 
     def __call__(self, sample):
         image, bboxes, cls = sample['image'], sample['bboxes'],sample['categories']
@@ -87,6 +88,11 @@ class ToTensor(object):
         sample['image'] = image
         sample['bboxes'] = bboxes
         sample['categories'] = cls
+        for f_s in self.feature_size:
+            key_str = 'scale_{}_'.format(f_s)
+            sample[key_str + 'obj'] = torch.from_numpy(sample[key_str + 'obj'])
+            sample[key_str + 'no_obj'] = torch.from_numpy(sample[key_str + 'no_obj'])
+            sample[key_str + 'target'] = torch.from_numpy(sample[key_str + 'target'])
 
         return sample
 
@@ -136,6 +142,7 @@ class YoloTarget(object):
                     [30, 61], [62, 45], [59, 119],
                     [10, 13], [16, 30], [33, 23]] narray shape(9,2)
             size = 416 or (416,416)
+            feature_size = np.array([52,26,13])
             ignore_threshold=0.5 iou>ignore_threshold, Think of the anchor have object
 
     output: [mask,noobj_mask,tx,ty,tw,th,confidence, classes'],
@@ -144,7 +151,7 @@ class YoloTarget(object):
             mask = positive sample
             no obj mask = Negative sample
     """
-    def __init__(self,classes, anchors, size,feature_size,ignore_threshold=0.5):
+    def __init__(self,classes, anchors, size, feature_size,ignore_threshold=0.5):
         self.size = size  # tuple(w,h)
         if not isinstance(self.size, tuple):
             self.size = (self.size, self.size)
@@ -206,7 +213,7 @@ class YoloTarget(object):
             no_obj_mask[n_id_anchor, grid_y[n_id_boxes], grid_x[n_id_boxes]]=0
 
             #----------------------fill in obj mask and data
-            obj = obj.squeeze() #anchor index
+            obj = obj.squeeze(axis=1) #anchor index
             #grid_x ,grid_y location index
             obj_mask = np.zeros(feature_shape)#obj=1 have object
             obj_mask[obj, grid_y, grid_x] = 1

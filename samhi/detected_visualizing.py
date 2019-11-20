@@ -27,9 +27,9 @@ from samhi.detected import DetectedAux as DA
 class YoloDataVis(object):
     def __init__(self):
         self.image_size = 416
-        self.anchors = np.array([[116, 90], [156, 198], [373, 326],
-                    [30, 61], [62, 45], [59, 119],
-                    [10, 13], [16, 30], [33, 23]])
+        self.anchors = np.array([[373, 326],[156, 198],[116, 90],
+                    [59, 119],[62, 45],[30, 61],
+                    [33, 23], [16, 30],[10, 13]])
         self.feature_size = np.array([52,26,13])
         self.n_anchor = self.anchors.shape[0]
         self.n_classes = 81
@@ -44,11 +44,13 @@ class YoloDataVis(object):
         ]
         return transforms.Compose(transform)
     def init_coco(self):
-        root = '/media/kipp/work/DATASET/COCO'
+        root = '/media/kipp/data/DATASET/COCO'
         transform = self.Transform(self.image_size)
         self.coco = COCO(root, transform=transform,target_transform=transform,train='val', years='2017')
+        print(self.coco.__len__())
+        print(self.coco.ids[4779])#384,4169,1988
 
-    def get_a_sample(self, image_id=102):
+    def get_a_sample(self, image_id=1072):#1072
         return self.coco.__getitem__(image_id)
 
     def ann_visualization(self):
@@ -86,20 +88,27 @@ class YoloDataVis(object):
         # plt.figure()
         # plt.imshow(image)
         # plt.show()
-        for f_s in self.feature_size:
+        anchors = self.anchors.reshape((3,3,2))
+        for f_s, ancs in zip(self.feature_size, anchors):
             key_str = 'scale_{}_'.format(f_s)
             # plot grid
             no_obj_mask = sample[key_str+'no_obj']#no_obj=1, obj=0
             obj_mask = sample[key_str+'obj']#obj=1 have object
             target = sample[key_str+'target']
+            print(obj_mask.shape, no_obj_mask.shape, target.shape)
             txs = target[0:3]
             tys = target[3:6]
             tws = target[6:9]
             ths = target[9:12]
             confs = target[12:15]
             cats = target[15:]
-            print(obj_mask.shape, no_obj_mask.shape, target.shape)
-            print(cats.shape)
+            print('categories shape: ',cats.shape)
+            #reshape cats to (3, n_classes, f_s,f_s)
+            catsL = np.split(cats,3,axis=0)
+            catsL = [l[np.newaxis,:] for l in catsL]
+            cats = np.concatenate(catsL,axis=0)
+            print("categories reshape: ",cats.shape)
+
             plt_img = image.copy()
             f = self.image_size//f_s
             for s in np.arange(0,self.image_size,f):
@@ -125,8 +134,16 @@ class YoloDataVis(object):
                 th = ths[anchor_id, y, x]
                 tw = tws[anchor_id, y, x]
                 #TODO: visualization th, tw
-                print(th,tw)
-
+                org_h = np.exp(th)*ancs[anchor_id,1]
+                org_w = np.exp(tw)*ancs[anchor_id,0]
+                p_start = (int((x+tx)*f-org_w/2), int((y+ty)*f-org_h/2))
+                p_end = (int((x+tx)*f+org_w/2), int((y+ty)*f+org_h/2))
+                cv2.line(plt_img, p_start, p_end, color[anchor_id],1)
+                cat = cats[anchor_id,:,y,x]
+                cat = np.where(cat==1)[0][0]
+                name = self.coco_aux.int2name(cat)
+                cv2.putText(plt_img, name, (int((x+tx)*f), int((y+ty)*f)), cv2.FONT_HERSHEY_SIMPLEX,
+                            1, Colors[cat], 1, cv2.LINE_AA)
             plt.figure()
             plt.imshow(plt_img)
             plt.show()
