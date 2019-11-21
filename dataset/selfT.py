@@ -88,11 +88,12 @@ class ToTensor(object):
         sample['image'] = image
         sample['bboxes'] = bboxes
         sample['categories'] = cls
-        for f_s in self.feature_size:
-            key_str = 'scale_{}_'.format(f_s)
-            sample[key_str + 'obj'] = torch.from_numpy(sample[key_str + 'obj'])
-            sample[key_str + 'no_obj'] = torch.from_numpy(sample[key_str + 'no_obj'])
-            sample[key_str + 'target'] = torch.from_numpy(sample[key_str + 'target'])
+        if 'scale' in sample.keys():
+            for f_s in self.feature_size:
+                key_str = 'scale_{}_'.format(f_s)
+                sample[key_str + 'obj'] = torch.from_numpy(sample[key_str + 'obj'])
+                sample[key_str + 'no_obj'] = torch.from_numpy(sample[key_str + 'no_obj'])
+                sample[key_str + 'target'] = torch.from_numpy(sample[key_str + 'target'])
 
         return sample
 

@@ -72,6 +72,8 @@ class COCOAux(object):
         ids = [0]+coco_ids
         names = ['__background__'] + coco_names
 
+        self.min_keypoints_per_image = 10
+
         self.__id2int = dict(zip(ids, range(len(ids))))
         self.__int2id = dict(zip(range(len(ids)), ids))
         self.__name2int = dict(zip(names, range(len(names))))
@@ -95,7 +97,6 @@ class COCOAux(object):
     def name2id(self,name):
         return self.int2id(self.name2int(name))
 
-
     def parse_coco_ann(self, objects):
         """box: x y w h"""
         assert isinstance(objects, list)
@@ -111,6 +112,29 @@ class COCOAux(object):
         categories = np.array(categories)
         bboxes = np.array(bboxes)
         return categories,bboxes
+
+    def _count_visible_keypoints(self,anno):
+        return sum(sum(1 for v in ann["keypoints"][2::3] if v > 0) for ann in anno)
+
+    def _has_only_empty_bbox(self,anno):
+        return all(any(o <= 1 for o in obj["bbox"][2:]) for obj in anno)
+
+    def has_valid_annotation(self,anno):
+        # if it's empty, there is no annotation
+        if len(anno) == 0:
+            return False
+        # if all boxes have close to zero area, there is no annotation
+        if self._has_only_empty_bbox(anno):
+            return False
+        # keypoints task have a slight different critera for considering
+        # if an annotation is valid
+        if "keypoints" not in anno[0]:
+            return True
+        # for keypoint detection tasks, only consider valid images those
+        # containing at least min_keypoints_per_image
+        if self._count_visible_keypoints(anno) >= self.min_keypoints_per_image:
+            return True
+        return False
 
     @classmethod
     def image_dir(cls, mode='val', years='2014'):
@@ -138,6 +162,14 @@ class COCO(Dataset):
         self.coco = COCOtool(self.annFile)
         self.ids = list(sorted(self.coco.imgs.keys()))
 
+        # filter images without detection annotations
+        ids = []
+        for img_id in self.ids:
+            ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
+            anno = self.coco.loadAnns(ann_ids)
+            if self.aux.has_valid_annotation(anno):
+                ids.append(img_id)
+        self.ids = ids
 
     def __len__(self):
         return len(self.ids)
@@ -175,17 +207,13 @@ class COCO(Dataset):
 
         return sample
 
-
-
-
 from dataset import selfT
-
 
 class CoCo(object):
     def __init__(self, max_object=64):
         # self.root = '/media/kipp/data/DATASET/COCO'
-        self.root = '/media/kipp/data/DATASET/COCO'
-        self.num_work = 1
+        self.root = '/media/kipp/work/DATASET/COCO'
+        self.num_work = 4
         self.shuffle = True
         self.max_object = max_object
         self.anchors = np.array([[373, 326], [156, 198], [116, 90],
@@ -202,7 +230,6 @@ class CoCo(object):
             selfT.KeepAspect(),
             selfT.Resize(img_size),
             selfT.YoloTarget(self.n_classes, self.anchors, img_size, self.feature_size),
-            #must be YoloTarget after
             selfT.ToTensor(self.max_object, self.feature_size),
             selfT.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]
@@ -251,12 +278,12 @@ def main():
         images = samples['image']
         boxes = samples['bboxes']
         cls = samples['categories']
-        print(samples['path'],samples['index'])
-        for f_s in [52,26,13]:
-            key_str = 'scale_{}_'.format(f_s)
-            for k in ['no_obj', 'obj','target']:
-                print(samples[key_str+k].shape)
-        print(images.shape, boxes.shape, cls.shape)
+        if 'scale' in samples.keys():
+            for f_s in [52, 26, 13]:
+                key_str = 'scale_{}_'.format(f_s)
+                for k in ['no_obj', 'obj', 'target']:
+                    print(samples[key_str + k].shape)
+            print(images.shape, boxes.shape, cls.shape)
         dis_img = img_writer(images[0], boxes[0], cls[0])
         plt.imshow(dis_img)
         plt.show()
