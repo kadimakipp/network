@@ -88,13 +88,9 @@ class ToTensor(object):
         sample['image'] = image
         sample['bboxes'] = bboxes
         sample['categories'] = cls
-        if 'scale' in sample.keys():
-            for f_s in self.feature_size:
-                key_str = 'scale_{}_'.format(f_s)
-                sample[key_str + 'obj'] = torch.from_numpy(sample[key_str + 'obj'])
-                sample[key_str + 'no_obj'] = torch.from_numpy(sample[key_str + 'no_obj'])
-                sample[key_str + 'target'] = torch.from_numpy(sample[key_str + 'target'])
-
+        if 'one' in sample.keys():
+            for k in ['one','two', 'three']:
+                sample[k] = torch.from_numpy(sample[k])
         return sample
 
 class Normalize(object):
@@ -164,6 +160,7 @@ class YoloTarget(object):
         self.ignore_threshold = ignore_threshold
         #TODO: param 统一管理
         self.feature_size = feature_size
+        self.outKeys = ['one', 'two', 'three']#52,26,13; sort must be same
 
     def __call__(self, sample):
         #TODO:Quesion : grid is feature or image; --image
@@ -236,12 +233,10 @@ class YoloTarget(object):
             cat_l = np.split(categories,anchor_level_n, axis=0)
             cat_l = [c.squeeze() for c in cat_l]
             categories = np.concatenate(cat_l,axis=0)
-            target = np.concatenate((tx,ty,tw,th,confidence,categories),axis=0)
+            target = np.concatenate((no_obj_mask,obj_mask,tx,ty,tw,th,confidence,categories),axis=0)
 
-            key_str = 'scale_{}_'.format(f_s)
-            sample[key_str+'obj']=obj_mask
-            sample[key_str+'no_obj'] = no_obj_mask
-            sample[key_str+'target'] = target
+            key_str = self.outKeys[i]
+            sample[key_str]=target
         return sample
 
 

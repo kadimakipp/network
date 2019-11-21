@@ -35,7 +35,7 @@ def MSE_fun():
     input = torch.ones(3, 5, dtype=torch.float32) * 3
     target = torch.ones(3, 5, dtype=torch.float32)
     # becase backward this is a scale
-    loss = nn.MSELoss(size_average=None, reduce=None, reduction='mean')
+    loss = nn.MSELoss(size_average=None, reduce=None, reduction='sum')
     output = loss(input, target)
     return output.numpy()
 
@@ -151,7 +151,7 @@ def BCEWithLogits_fun():
 
 
 
-def main(l='NLL'):
+def main(l='MSE'):
     output = None
     if l in ['L1']:
         output = L1_fun()

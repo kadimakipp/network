@@ -278,16 +278,14 @@ def main():
         images = samples['image']
         boxes = samples['bboxes']
         cls = samples['categories']
-        if 'scale' in samples.keys():
-            for f_s in [52, 26, 13]:
-                key_str = 'scale_{}_'.format(f_s)
-                for k in ['no_obj', 'obj', 'target']:
-                    print(samples[key_str + k].shape)
+        if 'one' in samples.keys():
+            for k in ['one','two', 'three']:
+                    print(k, samples[k].shape)# 3*(1+1+4+1+classes)#no_obj,obj,tx,ty,tw,th,conf,classes
             print(images.shape, boxes.shape, cls.shape)
         dis_img = img_writer(images[0], boxes[0], cls[0])
         plt.imshow(dis_img)
         plt.show()
-        # break
+        break
 
 if __name__ == "__main__":
     import fire

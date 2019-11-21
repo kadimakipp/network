@@ -50,7 +50,10 @@ class YoloDataVis(object):
         print(self.coco.__len__())
         #print(self.coco.ids[4779])#384,4169,1988
 
-    def get_a_sample(self, image_id=384):#1072
+    def get_a_sample(self, image_id=None):#1072
+        if image_id is None:
+            image_id = np.random.randint(self.coco.__len__())
+            print('image_id = ',image_id)
         return self.coco.__getitem__(image_id)
 
     def ann_visualization(self):
@@ -88,20 +91,20 @@ class YoloDataVis(object):
         # plt.figure()
         # plt.imshow(image)
         # plt.show()
+        target_keys = ['one','two', 'three']
         anchors = self.anchors.reshape((3,3,2))
-        for f_s, ancs in zip(self.feature_size, anchors):
-            key_str = 'scale_{}_'.format(f_s)
+        for f_s, ancs,k in zip(self.feature_size, anchors, target_keys):
             # plot grid
-            no_obj_mask = sample[key_str+'no_obj']#no_obj=1, obj=0
-            obj_mask = sample[key_str+'obj']#obj=1 have object
-            target = sample[key_str+'target']
+            target = sample[k]
+            no_obj_mask = target[0:3]
+            obj_mask = target[3:6]
+            txs = target[6:9]
+            tys = target[9:12]
+            tws = target[12:15]
+            ths = target[15:18]
+            confs = target[18:21]
+            cats = target[21:]
             print(obj_mask.shape, no_obj_mask.shape, target.shape)
-            txs = target[0:3]
-            tys = target[3:6]
-            tws = target[6:9]
-            ths = target[9:12]
-            confs = target[12:15]
-            cats = target[15:]
             print('categories shape: ',cats.shape)
             #reshape cats to (3, n_classes, f_s,f_s)
             catsL = np.split(cats,3,axis=0)
@@ -150,7 +153,7 @@ class YoloDataVis(object):
 
 def main():
     vis = YoloDataVis()
-    # vis.ann_visualization()
+    vis.ann_visualization()
     vis.target_visualization()
 
 if __name__ == "__main__":
