@@ -68,7 +68,6 @@ class DetectedAux(object):
         :param b_box:x y x y ,shape(N,4)
         :return:
         """
-        assert a_box.shape == b_box.shape
         Fmax = np.maximum
         Fmin = np.minimum
         if torch.is_tensor(a_box) and torch.is_tensor(b_box):
@@ -95,6 +94,18 @@ class DetectedAux(object):
 
 
 def test_iou():
+    aux = DetectedAux()
+    print("-------------one to all -----------")
+    a_box = np.array([[0.5, 0.5, 0.8, 0.8]])
+    b_box = np.array([[0.3, 0.4, 0.5, 0.6],
+                      [0.6, 0.6, 0.7, 0.9],
+                      [0.3, 0.2, 0.6, 0.8]])
+    iou = aux.iou(a_box, b_box)
+    print(iou)
+    a_box_t = torch.from_numpy(a_box)
+    b_box_t = torch.from_numpy(b_box)
+    iou_t = aux.iou(a_box_t, b_box_t)
+    print(iou_t)
     print("-------------one to one------------")
     # a1----b1
     # a2----b2
@@ -105,7 +116,7 @@ def test_iou():
     b_box = np.array([[0.3, 0.4, 0.5, 0.6],
                       [0.6, 0.6, 0.7, 0.9],
                       [0.3, 0.2, 0.6, 0.8]])
-    aux = DetectedAux()
+
     iou = aux.iou(a_box, b_box)
     print(iou)
     a_box_t = torch.from_numpy(a_box)
@@ -118,7 +129,7 @@ def test_iou():
     # a2-----b1
     # a2-----b2
     #   ...
-    print("---------one to all------------")
+    print("---------all to all------------")
     a_boxs = a_box.repeat(b_box.shape[0], axis=0)
     print(a_boxs)
 

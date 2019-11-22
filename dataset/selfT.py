@@ -137,7 +137,7 @@ class YoloTarget(object):
     input:  classes, 80
             anchors [[116, 90], [156, 198], [373, 326],
                     [30, 61], [62, 45], [59, 119],
-                    [10, 13], [16, 30], [33, 23]] narray shape(9,2)
+                    [10, 13], [16, 30], [33, 23]] narray shape(9,2)(w,h)
             size = 416 or (416,416)
             feature_size = np.array([52,26,13])
             ignore_threshold=0.5 iou>ignore_threshold, Think of the anchor have object
