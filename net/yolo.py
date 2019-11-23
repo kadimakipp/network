@@ -124,34 +124,39 @@ class YOLO_Loss(nn.Module):
 
     def forward(self, out, target):
         loss_detail = {'one':0, 'two':0, 'three':0}
-        n_class = target.shape[1]//3-7
+
         total_loss = 0
         #three scale
         for level_key in self.level_keys:
             pre = out[level_key]
             gt = target[level_key]
-            pre_tuple = pre.split([3+3,3+3,3,n_class*3],dim=1)
-            gt_tuple = gt.split([3,3,3+3,3+3,3,n_class*3], dim=1)
+            n_class = gt.shape[1] // 3 - 7
+            pre_tuple = pre.split([3,3,3,3,3,n_class*3],dim=1)
+            gt_tuple = gt.split([3,3,3,3,3,3,3,n_class*3], dim=1)
             # g---- ground truth
-            no_obj_mask,obj_mask,gxy,gwh,gconf,gcla = gt_tuple
+            no_obj_mask,obj_mask,gx,gy,gw,gh,gconf,gcla = gt_tuple
             #p --predicted
-            pxy,pwh,pconf,pcla = pre_tuple
-            pxy = self.sigmoid(pxy)
+            px,py,pw,ph,pconf,pcla = pre_tuple
+            px = self.sigmoid(px)
+            py = self.sigmoid(py)
             pconf = self.sigmoid(pconf)
             pcla = self.sigmoid(pcla)
 
-            loss_xy = self.mse(pxy*obj_mask, gxy*obj_mask)
-            loss_wh = self.mse(pwh*obj_mask, gwh*obj_mask)
+            loss_x = self.mse(px * obj_mask, gx * obj_mask)
+            loss_y = self.mse(py * obj_mask, gy * obj_mask)
+            loss_w = self.mse(pw * obj_mask, gw * obj_mask)
+            loss_h = self.mse(ph * obj_mask, gh * obj_mask)
 
             loss_conf = self.bce(pconf*obj_mask, gconf)+\
                 0.5*self.bce(pconf*no_obj_mask, gconf*no_obj_mask)
+            obj_mask = torch.repeat_interleave(obj_mask,n_class,dim=1)
             loss_cls = self.bce(pcla[obj_mask==1], gcla[obj_mask==1])
 
-            loss_detail[level_key] = [self.lambda_loc*(loss_xy+loss_wh),
+            loss_detail[level_key] = [self.lambda_loc*(loss_x+loss_y+loss_w+loss_h),
                                       self.lambda_conf*loss_conf,
                                       self.lambda_cls*loss_cls]
 
-            total_loss += self.lambda_loc*(loss_xy+loss_wh)+\
+            total_loss += self.lambda_loc*(loss_x+loss_y+loss_w+loss_h)+\
                    self.lambda_conf*loss_conf+\
                    self.lambda_cls*loss_cls
 

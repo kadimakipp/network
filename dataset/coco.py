@@ -269,23 +269,53 @@ def img_writer(img, boxes, cls):
                     1, RGB_COLORS[c], 2, cv2.LINE_AA)
     return dis_img
 
-def main():
-    coco = CoCo()
-    loader = coco.get_loader(2,416)
-    print(len(loader))
+class YOLOTest(object):
 
-    for i, samples in enumerate(loader):
-        images = samples['image']
-        boxes = samples['bboxes']
-        cls = samples['categories']
-        if 'one' in samples.keys():
-            for k in ['one','two', 'three']:
-                    print(k, samples[k].shape)# 3*(1+1+4+1+classes)#no_obj,obj,tx,ty,tw,th,conf,classes
-            print(images.shape, boxes.shape, cls.shape)
-        dis_img = img_writer(images[0], boxes[0], cls[0])
-        plt.imshow(dis_img)
-        plt.show()
-        break
+    def __init__(self):
+        from net.yolo import YOLO_Loss, YoloInference
+        coco = CoCo()
+        self.loader = coco.get_loader(2,416)
+        #-------loss-------
+        self.level_keys = ['one', 'two', 'three']
+        self.loss = YOLO_Loss()
+
+
+    def loss_test(self):
+        for i, samples in enumerate(self.loader):
+            out = {}
+            for k in self.level_keys:
+                gt =  samples[k]
+                o_s = gt.shape[1] -6#(no obj,obj)
+                _,_,out[k] = gt.split([3,3, (o_s)],dim=1)
+                
+            loss= self.loss(out, samples)
+            print(loss)
+            break
+
+
+
+def main(test = False):
+    if test:
+        coco = CoCo()
+        loader = coco.get_loader(2,416)
+        print(len(loader))
+
+        for i, samples in enumerate(loader):
+            images = samples['image']
+            boxes = samples['bboxes']
+            cls = samples['categories']
+            if 'one' in samples.keys():
+                for k in ['one','two', 'three']:
+                        print(k, samples[k].shape)# 3*(1+1+4+1+classes)#no_obj,obj,tx,ty,tw,th,conf,classes
+                print(images.shape, boxes.shape, cls.shape)
+            dis_img = img_writer(images[0], boxes[0], cls[0])
+            plt.imshow(dis_img)
+            plt.show()
+            break
+    else:
+        test = YOLOTest()
+        test.loss_test()
+
 
 if __name__ == "__main__":
     import fire
