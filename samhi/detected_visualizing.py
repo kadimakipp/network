@@ -44,13 +44,13 @@ class YoloDataVis(object):
         ]
         return transforms.Compose(transform)
     def init_coco(self):
-        root = '/media/kipp/work/DATASET/COCO'
+        root = '/media/kipp/data/DATASET/COCO'
         transform = self.Transform(self.image_size)
         self.coco = COCO(root, transform=transform,target_transform=transform,train='val', years='2017')
         print(self.coco.__len__())
         #print(self.coco.ids[4779])#384,4169,1988
 
-    def get_a_sample(self, image_id=None):#1072
+    def get_a_sample(self, image_id=0):#1072
         if image_id is None:
             image_id = np.random.randint(self.coco.__len__())
             print('image_id = ',image_id)

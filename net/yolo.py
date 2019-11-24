@@ -165,13 +165,14 @@ class YOLO_Loss(nn.Module):
 
 from samhi.detected import DetectedAux as aux
 class YoloInference(object):
-    def __init__(self, anchors, n_classes, feature_size,
+    def __init__(self, anchors, n_classes, feature_size,image_size,
                  obj_threshold,score_threshold,nms_threshold):
         super(YoloInference, self).__init__()
         self.obj_threshold = obj_threshold
         self.score_threshold = score_threshold
         self.nms_threshold = nms_threshold
 
+        self.image_size = image_size
         self.anchors = anchors
         self.n_anchors = anchors.shape[0]
         self.n_classes = n_classes
@@ -181,93 +182,134 @@ class YoloInference(object):
         self.anchors_tuple = torch.split(torch.from_numpy(self.anchors),3,dim=0)
 
     def forward(self, out):
-        if out.is_cuda():
+        if out[self.level_keys[0]].is_cuda:
             self.anchors_tuple = [an.cuda() for an in self.anchors_tuple]
-        n_anchor = self.n_anchors//3
-        level_result = {}
+        n_anchor = self.n_anchors//len(self.level_keys)
+        level_det = {}
         for level_key, anchors in zip(self.level_keys,self.anchors_tuple):
-            pre = out[level_key].deatch()
+            pre = out[level_key].detach()
             bn, _, f_h, f_w = pre.shape
             pre_tuple = pre.split([n_anchor + n_anchor,
                                    n_anchor + n_anchor,
                                    n_anchor,
                                    self.n_classes * n_anchor], dim=1)
             pxy, pwh, pconf, pcla = pre_tuple
-            pxy = self.sigmoid(pxy)
-            pconf = self.sigmoid(pconf)
-            pcla = self.sigmoid(pcla)
+            # pxy = self.sigmoid(pxy)
+            # pconf = self.sigmoid(pconf)
+            # pcla = self.sigmoid(pcla)
             # (bn, n_class*3, f_h, f_w) reshape (bn, 3, n_class, f_h,f_w)
-            pcla_t = pcla.split(80, dim=1)
+            pcla_t = pcla.split(self.n_classes, dim=1)
             pclaL = [pc.unsqueeze_(dim=1) for pc in pcla_t]
             pcla = torch.cat(pclaL, dim=1)
             #get score categories
             pscore, pcat = torch.max(pcla,dim=2,keepdim=True)
+            pcat.squeeze_(dim=2)
+            pscore.squeeze_(dim=2)
             #TODO:reconstructor code....,
             #(bn, 3  f_h, f_w)
             px,py = pxy.split([n_anchor,n_anchor],dim=1)
             #(bn, 3, f_h, f_w)
             grid_x = torch.arange(0, f_w).view(1,-1)#(1,f_w)
-            grid_y = torch.arange(0,f_h).view(-1,1)#(f_h,1)
-            px = (px+grid_x.float())/f_w
-            py = (py+grid_y.float())/f_h
+            grid_y = torch.arange(0, f_h).view(-1,1)#(f_h,1)
+            px = (px+grid_x)/f_w #算法有问题
+            py = (py+grid_y)/f_h
+            if level_key == 'three':
+                print(px.shape)
             pw,ph = pwh.split([n_anchor,n_anchor],dim=1)
             an_w, an_h = anchors[:,0], anchors[:,1]#(3)
-            an_w.view_(n_anchor,1,1), an_h.view_(n_anchor,1,1)
+            an_w = an_w.view(n_anchor,1,1)
+            an_h = an_h.view(n_anchor,1,1)
             #TODO: params
-            pw = torch.exp(pw)*an_w/416.
-            ph = torch.exp(ph)*an_h/416.
+            pw = torch.exp(pw)*an_w/self.image_size
+            ph = torch.exp(ph)*an_h/self.image_size
+            if level_key == 'three':
+                # np_pw = pw.numpy()
+                # print('pw ', np.where(np_pw))
+                # np_ph = ph.numpy()
+                # print('ph ', np.where(np_ph))
+                np_px = px.numpy()
+                print('px ', np_px[0, 0, 6, 8])
+                np_py = py.numpy()
+                print('py ', np_py[0, 0, 6, 8])
+                np_pw = pw.numpy()
+                print('pw ', np_pw[0,0,6,8])
+                np_ph = ph.numpy()
+                print('ph ', np_ph[0,0,6,8])
+
             x1 = px - pw / 2.
             y1 = py - ph / 2.
             x2 = px + pw / 2.
             y2 = py + ph / 2.
             x1[x1 < 0] = 0
             y1[y1 < 0] = 0
+            x2[x2 > 0] = 1
+            y2[y2 > 0] = 1
 
             masks = pconf>self.obj_threshold
+            pcat = pcat.double()#data type transform
 
-            pcat = pcat.float()#data type transform
             bn_det = []
             #px,py,pw,ph,pcat,pscore
             for i, (m,x_min,y_min,x_max,y_max,cat,score) in \
-                    enumerate(zip(masks,x1,y1,x2,y2,pcat,pscore)):#each image
-                detectionL = [x_min,y_min,x_max,y_max, cat, score]
-                detectionL = [d[m].view(-1,1) for d in detectionL]
-                detection = torch.cat(detectionL,dim=1)#(Nboxes,6)
+                    enumerate(zip(masks, x1, y1, x2, y2, pcat, pscore)):#each image
+                detL = [x_min,y_min,x_max,y_max, cat, score]
+                detL = [d[m].view(-1,1) for d in detL]
+                det = torch.cat(detL,dim=1)#(Nboxes,6)
                 #score threshold
+
+                #TODO:find some problem,....  one image do nms not anchor scale do.
                 if self.score_threshold>0:
-                    score_mask = detection[:,5]>self.score_threshold
-                    detection = detection[score_mask]
-                #NMS
-                ## sort socre
-                score_indices = torch.argsort(detection[:,5],descending=True)
-                detection = detection[score_indices]
-                cats = torch.unique(detection[:,4])
-                batch_det = []
-                for c in cats:#each class
-                    cat_mask = detection[:,4]==c
-                    det = detection[cat_mask]
-                    while det.shape[0]:
-                        max_det = det[0].unsqueeze(dim=0)
-                        batch_det.append(max_det)
-                        if det.shape[0] == 1:
-                            break
-                        #Get the IOUs for all boxes with lower confidence
-                        iou = aux.iou(max_det,det[1:])
-                        #remove iou>self.nms_threshold
-                        det = det[1:][iou>(1-self.nms_threshold)]
-                bn_det.append(torch.cat(batch_det,dim=0))#[(NBox,6),(NBox,6)] len==bn
-            level_result[level_key]=bn_det
+                    score_mask = det[:,5]>self.score_threshold
+                    det = det[score_mask]
+                bn_det.append(det)
+            level_det[level_key] = bn_det # batch_size, (Nboxes, 6)
 
+        #level merge
+        bn_det = []
         bn = out[self.level_keys[0]].shape[0]
-
-        detections = []
-        for bn_i in bn:
+        for n in range(bn):
             batch = []
             for k in self.level_keys:
-                batch.append(level_result[k][bn_i])
-            detections.append(torch.cat(batch,dim=0))
+                batch.append(level_det[k][n])
+            batch_det = torch.cat(batch, dim=0)
+            # print('nms before', batch_det.shape)
+            # batch_det = self.NMS(batch_det, self.nms_threshold)
+            # print('nms after', batch_det.shape)
+            bn_det.append(batch_det)
+        return bn_det
 
-        return detections
+
+
+    @staticmethod
+    def NMS(det, nms_threshold):
+        """
+
+        :param det: [x1, y1, x2, y2, cls, score](N, 6) tensor
+        :param nms_threshold:
+        :return:
+        """
+        #NMS
+        ## sort socre
+        score_indices = torch.argsort(det[:,5],descending=True)
+        detection = det[score_indices]
+        cats = torch.unique(detection[:,4])
+        detections = []
+        for c in cats:#each class
+            cat_mask = detection[:,4]==c
+            det = detection[cat_mask]
+            while det.shape[0]:
+                max_det = det[0].unsqueeze(dim=0)
+                detections.append(max_det)
+                if det.shape[0] == 1:
+                    break
+                #Get the IOUs for all boxes with lower confidence
+                iou = aux.iou(max_det,det[1:])
+                #remove iou>self.nms_threshold
+                det = det[1:][iou>(1-nms_threshold)]
+
+        return torch.cat(detections, dim=0)
+
+
 
 def main():
     input = torch.randn(4,3,416,416)
