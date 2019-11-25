@@ -196,9 +196,9 @@ class YoloInference(object):
                                    n_anchor,
                                    self.n_classes * n_anchor], dim=1)
             pxy, pwh, pconf, pcla = pre_tuple
-            # pxy = self.sigmoid(pxy)
-            # pconf = self.sigmoid(pconf)
-            # pcla = self.sigmoid(pcla)
+            pxy = self.sigmoid(pxy)
+            pconf = self.sigmoid(pconf)
+            pcla = self.sigmoid(pcla)
             # (bn, n_class*3, f_h, f_w) reshape (bn, 3, n_class, f_h,f_w)
             pcla_t = pcla.split(self.n_classes, dim=1)
             pclaL = [pc.unsqueeze_(dim=1) for pc in pcla_t]
