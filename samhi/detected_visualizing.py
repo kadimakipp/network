@@ -44,13 +44,13 @@ class YoloDataVis(object):
         ]
         return transforms.Compose(transform)
     def init_coco(self):
-        root = '/media/kipp/data/DATASET/COCO'
+        root = '/media/kipp/work/DATASET/COCO'
         transform = self.Transform(self.image_size)
         self.coco = COCO(root, transform=transform,target_transform=transform,train='val', years='2017')
         print(self.coco.__len__())
         #print(self.coco.ids[4779])#384,4169,1988
 
-    def get_a_sample(self, image_id=0):#1072
+    def get_a_sample(self, image_id=20):#1072
         if image_id is None:
             image_id = np.random.randint(self.coco.__len__())
             print('image_id = ',image_id)
@@ -124,9 +124,10 @@ class YoloDataVis(object):
                 cv2.circle(plt_img, (x*f, y*f), 5, color[anchor_id], 2)
 
             #plot obj grad
-            obj_anchor, obj_x, obj_y = np.where(obj_mask == 1)
+            obj_anchor, obj_y, obj_x = np.where(obj_mask == 1)
             color = [Colors[125],Colors[128],Colors[133]]
-            for (anchor_id, y, x) in zip(obj_anchor, obj_x, obj_y):
+            print(obj_x.shape)
+            for (anchor_id, y, x) in zip(obj_anchor, obj_y, obj_x):
                 p_start = (x*f, y*f)
                 cv2.circle(plt_img, p_start, 3, color[anchor_id], -1)
                 tx = txs[anchor_id,y,x]
@@ -151,10 +152,129 @@ class YoloDataVis(object):
             plt.imshow(plt_img)
             plt.show()
 
-def main():
-    vis = YoloDataVis()
-    vis.ann_visualization()
-    vis.target_visualization()
+
+from net.yolo import YOLO_Loss, YoloInference
+from dataset.coco import CoCo
+
+class YOLOTest(object):
+    def __init__(self):
+
+        coco = CoCo()
+        self.loader = coco.get_loader(2, 416)
+        # -------loss-------
+        self.level_keys = ['one', 'two', 'three']
+        print("Attention!!! run this program need remove Sigmoid function")
+
+    def loss_test(self):
+        self.loss = YOLO_Loss()
+        for i, samples in enumerate(self.loader):
+            out = {}
+            for k in self.level_keys:
+                gt = samples[k]
+                o_s = gt.shape[1] - 6  # (no obj,obj)
+                _, _, out[k] = gt.split([3, 3, (o_s)], dim=1)
+            loss = self.loss(out, samples)
+            print(loss)
+            break
+
+    @staticmethod
+    def img_writer(img, boxes, cls, target=True):
+        """
+
+        target = True, boxes from data loader target
+        target = False, boxes from network generate
+        """
+        aux = COCOAux()
+        dis_img = img.numpy().transpose(1, 2, 0)
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
+        dis_img = (dis_img * std + mean) * 255
+
+        dis_img = dis_img.astype(np.uint8).copy()
+        h, w = dis_img.shape[0:2]
+        boxes = boxes.numpy()
+        cls = cls.numpy().astype(np.uint8)
+        for box, c in zip(boxes, cls):
+            if c == 0: break
+            name = aux.int2name(c)
+            assert c == aux.id2int(aux.name2id(aux.int2name(c)))
+            if target:
+                box = DA.cxywh2xywh(box)
+                cv2.rectangle(dis_img, (int(box[0] * w), int(box[1] * h)),
+                              (int((box[0] + box[2]) * w), int((box[1] + box[3]) * h)), Colors[c], 1)
+            else:
+                cv2.rectangle(dis_img, (int(box[0] * w), int(box[1] * h)),
+                              (int(box[2] * w), int(box[3] * h)), Colors[c], 1)
+            cv2.putText(dis_img, name, (int(box[0] * w), int(box[1] * h)), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, Colors[c], 1, cv2.LINE_AA)
+        return dis_img
+
+    def inference_test(self):
+        anchors = np.array([[373, 326], [156, 198], [116, 90],
+                            [59, 119], [62, 45], [30, 61],
+                            [33, 23], [16, 30], [10, 13]])
+        n_classes = 81
+        feature_size = [52, 26, 13]
+        obj_threshold = 0.5
+        score_threshold = -1
+        nms_threshold = 0.45
+        image_size = 416
+        self.inference = YoloInference(anchors=anchors,
+                                       n_classes=n_classes,
+                                       feature_size=feature_size,
+                                       image_size=image_size,
+                                       obj_threshold=obj_threshold,
+                                       score_threshold=score_threshold,
+                                       nms_threshold=nms_threshold)
+        plt.figure()
+        for i, samples in enumerate(self.loader):
+            out = {}
+            for k in self.level_keys:
+                gt = samples[k]
+                o_s = gt.shape[1] - 6  # (no obj,obj)
+                _, _, out[k] = gt.split([3, 3, (o_s)], dim=1)
+            ind = 0
+            gt_image = samples['image'][ind]
+            gt_boxes = samples['bboxes'][ind]
+            gt_cls = samples['categories'][ind]
+            print('index: ', samples['index'][ind])
+            # print('gt num: ',gt_cls[gt_cls>0].shape)
+            results = self.inference.forward(out)
+            result = results[ind]
+            boxes, cls, scores = result.split([4, 1, 1], dim=1)
+            cls.squeeze_(dim=1)
+
+            dis_gt_img = self.img_writer(gt_image, gt_boxes, gt_cls)
+            dis_img = self.img_writer(gt_image, boxes, cls, target=False)
+
+            plt.subplot(1,2,1)
+            plt.imshow(dis_gt_img)
+            plt.subplot(1,2,2)
+            plt.imshow(dis_img)
+            plt.pause(1)
+            # gt_mask = gt_cls>0
+            # gt_boxes = gt_boxes[gt_mask]
+            # gt_cls = gt_cls[gt_mask]
+            # print(gt_boxes.shape, boxes.shape)
+            # assert gt_boxes.shape == boxes.shape
+            # assert gt_cls.shape == cls.shape
+
+
+
+
+
+
+def main(run='test'):
+    if run in ['vis']:
+        vis = YoloDataVis()
+        vis.ann_visualization()
+        vis.target_visualization()
+    elif run in ['test']:
+        test = YOLOTest()
+        # test.loss_test()
+        test.inference_test()
+    else:
+        print('run must be ["test", "vis"]!!')
 
 if __name__ == "__main__":
     import fire

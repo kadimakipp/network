@@ -174,6 +174,8 @@ class YoloInference(object):
 
         self.image_size = image_size
         self.anchors = anchors
+
+
         self.n_anchors = anchors.shape[0]
         self.n_classes = n_classes
         self.feature_size = feature_size #[52,26,13]
@@ -205,46 +207,28 @@ class YoloInference(object):
             pscore, pcat = torch.max(pcla,dim=2,keepdim=True)
             pcat.squeeze_(dim=2)
             pscore.squeeze_(dim=2)
-            #TODO:reconstructor code....,
             #(bn, 3  f_h, f_w)
             px,py = pxy.split([n_anchor,n_anchor],dim=1)
             #(bn, 3, f_h, f_w)
             grid_x = torch.arange(0, f_w).view(1,-1)#(1,f_w)
             grid_y = torch.arange(0, f_h).view(-1,1)#(f_h,1)
-            px = (px+grid_x)/f_w #算法有问题
+            px = (px+grid_x)/f_w
             py = (py+grid_y)/f_h
-            if level_key == 'three':
-                print(px.shape)
             pw,ph = pwh.split([n_anchor,n_anchor],dim=1)
             an_w, an_h = anchors[:,0], anchors[:,1]#(3)
-            an_w = an_w.view(n_anchor,1,1)
-            an_h = an_h.view(n_anchor,1,1)
+            an_w = an_w.view(n_anchor,1,1).float()
+            an_h = an_h.view(n_anchor,1,1).float()
             #TODO: params
             pw = torch.exp(pw)*an_w/self.image_size
             ph = torch.exp(ph)*an_h/self.image_size
-            if level_key == 'three':
-                # np_pw = pw.numpy()
-                # print('pw ', np.where(np_pw))
-                # np_ph = ph.numpy()
-                # print('ph ', np.where(np_ph))
-                np_px = px.numpy()
-                print('px ', np_px[0, 0, 6, 8])
-                np_py = py.numpy()
-                print('py ', np_py[0, 0, 6, 8])
-                np_pw = pw.numpy()
-                print('pw ', np_pw[0,0,6,8])
-                np_ph = ph.numpy()
-                print('ph ', np_ph[0,0,6,8])
-
             x1 = px - pw / 2.
             y1 = py - ph / 2.
             x2 = px + pw / 2.
             y2 = py + ph / 2.
-            x1[x1 < 0] = 0
-            y1[y1 < 0] = 0
-            x2[x2 > 0] = 1
-            y2[y2 > 0] = 1
-
+            x1[x1 < 0] = 0.
+            y1[y1 < 0] = 0.
+            x2[x2 > 1] = 1.
+            y2[y2 > 1] = 1.
             masks = pconf>self.obj_threshold
             pcat = pcat.double()#data type transform
 
@@ -256,8 +240,6 @@ class YoloInference(object):
                 detL = [d[m].view(-1,1) for d in detL]
                 det = torch.cat(detL,dim=1)#(Nboxes,6)
                 #score threshold
-
-                #TODO:find some problem,....  one image do nms not anchor scale do.
                 if self.score_threshold>0:
                     score_mask = det[:,5]>self.score_threshold
                     det = det[score_mask]
@@ -272,9 +254,7 @@ class YoloInference(object):
             for k in self.level_keys:
                 batch.append(level_det[k][n])
             batch_det = torch.cat(batch, dim=0)
-            # print('nms before', batch_det.shape)
-            # batch_det = self.NMS(batch_det, self.nms_threshold)
-            # print('nms after', batch_det.shape)
+            batch_det = self.NMS(batch_det, self.nms_threshold)
             bn_det.append(batch_det)
         return bn_det
 
@@ -305,7 +285,7 @@ class YoloInference(object):
                 #Get the IOUs for all boxes with lower confidence
                 iou = aux.iou(max_det,det[1:])
                 #remove iou>self.nms_threshold
-                det = det[1:][iou>(1-nms_threshold)]
+                det = det[1:][iou<=nms_threshold]
 
         return torch.cat(detections, dim=0)
 
