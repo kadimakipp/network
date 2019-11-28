@@ -24,7 +24,7 @@ import os
 import cv2
 
 '''
-pick and place dataset only suction way
+pick and place dataset.md only suction way
 '''
 DEP_MEAN = 0.4313711812112666
 DEP_STD = 0.06876936556987262

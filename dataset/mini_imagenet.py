@@ -62,7 +62,7 @@ class MiniImagenet(Dataset):
             self.reconstruct_miniimagenet(self.csv, root)
             self.write_classes_name(self.csv, root)
 
-        print('origin dataset len ',len(self.csv))
+        print('origin dataset.md len ',len(self.csv))
         class_name = self.read_classes_name(root)
         print(class_name)
 
@@ -96,7 +96,7 @@ class MiniImagenet(Dataset):
         test.to_csv(os.path.join(new_csv, 'test.csv'), index=False, header=True)
         val.to_csv(os.path.join(new_csv, 'val.csv'), index=False, header=True)
 
-        print("reconstruct mini imagenet dataset ")
+        print("reconstruct mini imagenet dataset.md ")
 
     @staticmethod
     def write_classes_name(csv, root):

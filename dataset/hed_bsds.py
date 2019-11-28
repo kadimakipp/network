@@ -23,7 +23,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 
 """
-HED-BSDS dataset
+HED-BSDS dataset.md
 Contour Detection and Image Segmentation Resources
 link https://cseweb.ucsd.edu/~weijian/static/datasets/hed/hed-data.tar
 """

@@ -32,7 +32,7 @@ class Alchemy(object):
         self.image_size = image_size
         hedbsds = hedBSDS()
         self.loader = hedbsds.get_loader(1,self.image_size[1])
-        print('init dataset done...')
+        print('init dataset.md done...')
         self.device = AuxF.device()
         self.net = UNet(self.image_size[0], classes)
         self.net.to(self.device)
