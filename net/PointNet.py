@@ -97,6 +97,10 @@ class PointNetKernel(nn.Module):
         global_f = out.squeeze(dim=2)
         return local_f, global_f
 
+#TODO:classification 1.for global feature mlp(512, 256, k); 2. mlp(k);  -k is classes number
+#TODO:segmentation: 1.concat local feature and global feature; 2.mlp(512,256,128); 3.mlp(mlp, m); 4.mlp(n,m);
+# - n is points number, - m is classes number
+
 def main():
     input = torch.randn(4,3, 1024)
     # # stn = STNkd(3)
@@ -111,6 +115,13 @@ def main():
     pnet = PointNetKernel(3)
     loc, glo = pnet(input)
     print(loc.shape, glo.shape)
+    #concatation
+    glo.unsqueeze_(dim=2)
+    glo = torch.repeat_interleave(glo, 1024, dim=2)
+    print(glo.shape)
+    seg_feature = torch.cat((loc, glo), dim=1)
+    print(seg_feature.shape)
+
 
 
 
