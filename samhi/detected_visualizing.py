@@ -260,10 +260,6 @@ class YOLOTest(object):
             # assert gt_cls.shape == cls.shape
 
 
-
-
-
-
 def main(run='test'):
     if run in ['vis']:
         vis = YoloDataVis()

@@ -151,7 +151,7 @@ def BCEWithLogits_fun():
 
 
 
-def main(l='MSE'):
+def main(l='CrossEntropy'):
     output = None
     if l in ['L1']:
         output = L1_fun()
