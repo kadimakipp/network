@@ -50,9 +50,9 @@ class FocalLoss(nn.Module):
 
 
 def main():
-    i = np.array([[0.7, 0.2, 0.1], [0.4, 1.2, 0.4]])
+    i = np.array([[0.7, 0.2], [0.4, 1.2]])
     t = np.array([0, 1])
-    weight = torch.from_numpy(np.array([0.6, 0.2, 0.2])).float()
+    weight = torch.from_numpy(np.array([0.6, 0.2])).float()
     input = torch.from_numpy(i).float()
     target = torch.from_numpy(t).type(torch.LongTensor)
     loss_f = nn.CrossEntropyLoss(weight=weight,reduction='none')
@@ -64,6 +64,7 @@ def main():
     # -------
     su = np.exp(i).sum(axis=1).reshape(2,1)
     sf = np.exp(i)/su
+    print(su, sf)
     log_sf = np.log(sf)
     nsf = 1-sf
     nfl = -nsf*log_sf
