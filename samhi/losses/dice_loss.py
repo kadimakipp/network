@@ -39,7 +39,10 @@ class DiceLoss(nn.Module):
         :param target: one hot label
         :return:
         """
-        dim = (1,)
+        if len(input.shape) not in [2,4]:
+            raise ValueError("input must be 2D or 4D tensor")
+        dim = (2,3) if len(input.shape)==4 else (1,)
+
         input = torch.sigmoid(input)
         print(input.shape, target.shape)
         intersection = (input*target).sum(dim=dim)
