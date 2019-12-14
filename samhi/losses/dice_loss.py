@@ -44,7 +44,6 @@ class DiceLoss(nn.Module):
         dim = (2,3) if len(input.shape)==4 else (1,)
 
         input = torch.sigmoid(input)
-        print(input.shape, target.shape)
         intersection = (input*target).sum(dim=dim)
         X = input.sum(dim=dim)
         Y = target.sum(dim=dim)
@@ -72,8 +71,8 @@ def main():
     #4D
     input = torch.randn((4,3,10,10))
     target = torch.randint(3,(4,10,10))
-    one_hot = torch.nn.functional.one_hot(target, num_classes=3).unsqueeze(dim=1)
-    one_hot.transpose_(1,-1).squeeze_(dim=-1)
+    one_hot = torch.nn.functional.one_hot(target, num_classes=3)
+    one_hot = one_hot.unsqueeze(dim=1).transpose(1,-1).squeeze(dim=-1).clone()#must be clone
     print(one_hot.shape)
     loss = bdl(input, one_hot)
     print(loss)
