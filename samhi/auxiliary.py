@@ -16,9 +16,10 @@ from __future__ import print_function
 
 import numpy as np
 import torch
-import torchvision
 import os
 import math
+from functools import wraps
+import time
 
 class AuxFunction(object):
     def __init__(self):
@@ -126,6 +127,22 @@ class AuxFunction(object):
         return dir.replace('boy','gourd')
 
 
+def timer(function):
+    '''
+    用装饰器实现函数计时
+    '''
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        print('[Function: {name} start...]'.format(name=function.__name__))
+        t0 = time.time()
+        result = function(*args, **kwargs)
+        t1 = time.time()
+        print('[Function: {name} finished, spent time: {time:.4f}s]'.format(name=function.__name__, time=t1 - t0))
+        return result
+
+    return function_timer
+
+
 
 if __name__ == "__main__":
     aux = AuxFunction()
@@ -135,6 +152,13 @@ if __name__ == "__main__":
     print(boy_dir, gourd_dir)
     aux.make_dirs(gourd_dir)
     aux.make_dirs(boy_dir)
+
+
+    @timer
+    def t_timer(a, b):
+        time.sleep(0.2)
+        return a, b
+    print(t_timer(1, 2))
 
 
 
